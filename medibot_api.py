@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-medibot_api.py — Flask REST API wrapping MediBot v2
+medibot_api.py — Flask REST API wrapping MediBot
 Uses: NLTK + spaCy (NLP) · TensorFlow/Keras BiLSTM + sklearn (ML)
 
 Run:
