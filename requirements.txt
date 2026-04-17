@@ -1,16 +1,16 @@
 # SymptomChat — Python dependencies
 # Install all:  pip install -r requirements.txt
 
-flask>=3.0
-scikit-learn>=1.3
-tensorflow>=2.13          # includes Keras; for Apple Silicon use tensorflow-macos
-spacy>=3.7
-nltk>=3.8
-numpy>=1.24
-scipy>=1.11
-colorama>=0.4
+flask
+scikit-learn
+tensorflow          # includes Keras; for Apple Silicon use tensorflow-macos
+spacy
+nltk
+numpy
+scipy
+colorama
 
 # Optional — production deployment
-gunicorn>=21.0
-redis>=5.0              # for multi-instance session store
-flask-limiter>=3.5      # rate limiting
+gunicorn
+redis              # for multi-instance session store
+flask-limiter      # rate limiting
