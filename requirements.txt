@@ -5,6 +5,7 @@ flask
 scikit-learn
 tensorflow>=2.15          # includes Keras; for Apple Silicon use tensorflow-macos
 spacy
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 nltk
 numpy
 scipy
