@@ -1,7 +1,6 @@
 # SymptomChat — Python dependencies
 # Install all:  pip install -r requirements.txt
 
-python>=3.10.13
 flask
 scikit-learn
 tensorflow>=2.15          # includes Keras; for Apple Silicon use tensorflow-macos
