@@ -3,8 +3,8 @@
 
 flask
 scikit-learn
-tensorflow==2.15.0          # includes Keras; for Apple Silicon use tensorflow-macos
-keras==2.15.0
+tensorflow==2.21.0          # includes Keras; for Apple Silicon use tensorflow-macos
+keras==3.14.0
 numpy         
 spacy
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
