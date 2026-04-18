@@ -21,7 +21,6 @@ MODEL_DIR = os.path.join(BASE_DIR, "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 sk_path = os.path.join(MODEL_DIR, "sk_model.joblib")
-tf_path = os.path.join(MODEL_DIR, "tf_model.keras")
 
 # ── Load MediBot engine ────────────────────────────────────────────────────
 print("\n  [MediBot API] Initialising NLP + ML...")
@@ -51,58 +50,15 @@ def load_models_once():
         MODELS_LOADED = True
 
 def _init_engines():
-    """
-    Loads models and manually overrides the 'trained' state 
-    to prevent the RuntimeError: 'Model not trained yet'.
-    """
-    from tensorflow import keras # type: ignore
-
-    tokenizer_path = os.path.join(MODEL_DIR, "keras_tokenizer.joblib")
-    maxlen_path = os.path.join(MODEL_DIR, "max_len.joblib")
-    label_path = os.path.join(MODEL_DIR, "label_encoder.joblib")
-
-    # Check ALL required files
-    if all([
-        os.path.exists(sk_path),
-        os.path.exists(tf_path),
-        os.path.exists(tokenizer_path),
-        os.path.exists(maxlen_path),
-        os.path.exists(label_path),
-    ]):
-        print("  [MediBot API] Loading models from disk...", end=" ", flush=True)
-
+    if os.path.exists(sk_path):
+        print("  [MediBot API] Loading sklearn model...", end=" ", flush=True)
         ML.sk_clf = joblib.load(sk_path)
-        ML.tf_clf.model = keras.models.load_model(tf_path)
-
-        ML.tf_clf.keras_tokenizer = joblib.load(tokenizer_path)
-        ML.tf_clf.MAX_LEN = joblib.load(maxlen_path)
-        ML.tf_clf.label_encoder = joblib.load(label_path)
-
-        ML.tf_clf._fitted = True
-
         print("Ready")
-
     else:
-        print("  [MediBot API] Models not found. Training once...", end=" ", flush=True)
-
-        # Train both models
-        ML.train()
-
-        # Save sklearn
+        print("  [MediBot API] Training sklearn model...", end=" ", flush=True)
+        ML.train()   # Make sure this trains ONLY sklearn now
         joblib.dump(ML.sk_clf, sk_path)
-
-        # Save TF model
-        ML.tf_clf.model.save(tf_path)
-
-        # Save ALL required components
-        joblib.dump(ML.tf_clf.keras_tokenizer, tokenizer_path)
-        joblib.dump(ML.tf_clf.MAX_LEN, maxlen_path)
-        joblib.dump(ML.tf_clf.label_encoder, label_path)
-
         print("Trained & Saved")
-
-# Initialize models before starting the server
-# _init_engines()
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)

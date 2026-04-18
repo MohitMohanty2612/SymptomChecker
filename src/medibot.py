@@ -34,13 +34,6 @@ from spacy.tokens import Doc
 
 #  3  ML IMPORTS — TensorFlow + scikit-learn
 
-import tensorflow as tf # type: ignore
-from tensorflow import keras # type: ignore
-from tensorflow.keras import layers # type: ignore
-from tensorflow.keras.preprocessing.text import Tokenizer as KerasTokenizer # type: ignore
-from tensorflow.keras.preprocessing.sequence import pad_sequences # type: ignore
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau # type: ignore
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
@@ -802,97 +795,7 @@ class NLPEngine:
         return None
 
 
-#  7  ML ENGINE — TensorFlow Keras BiLSTM + sklearn TF-IDF/SVC + Cosine
-
-class TFBiLSTMClassifier:
-    """
-    Bidirectional LSTM text classifier built with TensorFlow / Keras.
-
-    Architecture:
-      Embedding (vocab × 64, mask_zero=True)
-      → Bidirectional LSTM (64, return_sequences=True, dropout=0.2)
-      → Bidirectional LSTM (32, dropout=0.2)
-      → Dense (64, relu)
-      → BatchNormalization
-      → Dropout (0.4)
-      → Dense (num_classes, softmax)
-
-    Training: sparse categorical cross-entropy · Adam (lr 0.001)
-              EarlyStopping (patience=5) · ReduceLROnPlateau
-    """
-
-    VOCAB_SIZE = 3500
-    MAX_LEN    = 70
-    EMBED_DIM  = 64
-
-    def __init__(self, num_classes: int):
-        self.num_classes = num_classes
-        self.keras_tokenizer = KerasTokenizer(
-            num_words=self.VOCAB_SIZE,
-            oov_token="<OOV>",
-            filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n',
-        )
-        self.label_encoder = LabelEncoder()
-        self.model: Optional[keras.Sequential] = None
-        self._fitted = False
-
-    def _build_model(self) -> keras.Sequential:
-        model = keras.Sequential([
-            layers.Embedding(
-                input_dim=self.VOCAB_SIZE,
-                output_dim=self.EMBED_DIM,
-                input_length=self.MAX_LEN,
-                mask_zero=True,
-            ),
-            layers.Bidirectional(layers.LSTM(64, return_sequences=True, dropout=0.2, recurrent_dropout=0.1)),
-            layers.Bidirectional(layers.LSTM(32, dropout=0.2)),
-            layers.Dense(64, activation="relu"),
-            layers.BatchNormalization(),
-            layers.Dropout(0.4),
-            layers.Dense(self.num_classes, activation="softmax"),
-        ], name="medibot_bilstm")
-
-        model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
-        )
-        return model
-
-    def _encode_texts(self, texts: List[str]) -> np.ndarray:
-        seqs = self.keras_tokenizer.texts_to_sequences(texts)
-        return pad_sequences(seqs, maxlen=self.MAX_LEN, padding="post", truncating="post")
-
-    def fit(self, texts: List[str], labels: List[str], epochs: int = 40, batch_size: int = 16):
-        self.keras_tokenizer.fit_on_texts(texts)
-        X = self._encode_texts(texts)
-        y = self.label_encoder.fit_transform(labels)
-
-        self.model = self._build_model()
-        self.model.fit(
-            X, y,
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_split=0.1,
-            verbose=0,
-            callbacks=[
-                EarlyStopping(monitor="val_loss", patience=6, restore_best_weights=True),
-                ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-5),
-            ],
-        )
-        self._fitted = True
-
-    def predict_proba(self, text: str) -> np.ndarray:
-        """Returns probability array aligned to self.label_encoder.classes_."""
-        if not self._fitted:
-            raise RuntimeError("Model not trained yet. Call fit() first.")
-        X = self._encode_texts([text])
-        return self.model.predict(X, verbose=0)[0]   # shape: (num_classes,)
-
-    @property
-    def classes_(self):
-        return self.label_encoder.classes_
-
+#  7  ML ENGINE — sklearn TF-IDF/SVC + Cosine
 
 class SklearnEnsemble:
     """
@@ -1006,10 +909,6 @@ class MLEngine:
     def __init__(self, conditions: List[Condition]):
         self.conditions = conditions
         self._build_training_data()
-
-        n_classes = len(conditions)
-
-        self.tf_clf = TFBiLSTMClassifier(n_classes)
         self.sk_clf = SklearnEnsemble(conditions)
 
     def _build_training_data(self):
@@ -1054,13 +953,6 @@ class MLEngine:
         # sklearn is fast
         self.sk_clf.fit(self._train_docs, self._train_labels)
 
-        # TF BiLSTM
-        self.tf_clf.fit(
-            self._train_docs,
-            self._train_labels,
-            epochs=40,
-            batch_size=16,
-        )
 
     def predict(self, user_text: str, nlp_result: Dict, top_n: int = 5) -> List[Dict]:
         """
@@ -1072,15 +964,8 @@ class MLEngine:
         # ── sklearn scores ─────────────────────────────────────────────
         sk_scores = self.sk_clf.predict_proba_over_conditions(combined_text)
 
-        # ── TF BiLSTM scores ───────────────────────────────────────────
-        tf_raw  = self.tf_clf.predict_proba(combined_text)          # len = num_classes
-        tf_scores = np.zeros(len(cond_names))
-        for i, label in enumerate(self.tf_clf.classes_):
-            if label in cond_names:
-                tf_scores[cond_names.index(label)] = tf_raw[i]
-
         # ── Grand ensemble ─────────────────────────────────────────────
-        ensemble = 0.40 * tf_scores + 0.60 * sk_scores
+        ensemble = sk_scores
 
         # ── Negation penalty ──────────────────────────────────────────
         negated = nlp_result.get("negated", set())
@@ -1162,13 +1047,6 @@ class MediBot:
         self.ml.sk_clf.fit(self.ml._train_docs, self.ml._train_labels)
         print("✓")
 
-        print(f"    Training Bidirectional LSTM (TensorFlow/Keras)...", end=" ", flush=True)
-        self.ml.tf_clf.fit(
-            self.ml._train_docs,
-            self.ml._train_labels,
-            epochs=40,
-            batch_size=16,
-        )
         dt = time.time() - t0
         print(f"✓  ({dt:.1f}s)")
         print(f"\n  {_c(f'All models ready ✓  |  {len(CONDITIONS)} conditions')}\n")
@@ -1356,7 +1234,7 @@ class MediBot:
                 if self.phase == "results":
                     self._post_results()
             except KeyboardInterrupt:
-                print(f"\n\n  {_c('Session interrupted. Goodbye! 🌿', Fore.CYAN)}\n")
+                print(f"\n\n  {_c('Session interrupted. Goodbye! 🌿')}\n")
                 break
 
 #  10  ENTRY POINT
