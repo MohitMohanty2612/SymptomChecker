@@ -5,6 +5,10 @@ from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
+import src.medibot as medibot
+
+sys.modules['medibot'] = medibot
+
 
 try:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,7 +26,7 @@ tf_path = os.path.join(MODEL_DIR, "tf_model.keras")
 # ── Load MediBot engine ────────────────────────────────────────────────────
 print("\n  [MediBot API] Initialising NLP + ML...")
 
-from .medibot import (
+from medibot import (
     NLPEngine,
     MLEngine,
     CONDITIONS,
