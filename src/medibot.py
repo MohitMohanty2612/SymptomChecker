@@ -12,41 +12,34 @@ Run:  python medibot.py
 API:  used by medibot_api.py
 """
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  §1  STANDARD IMPORTS
-# ═══════════════════════════════════════════════════════════════════════════════
+
 import re, sys, time, random, textwrap
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional, Set
-
 import numpy as np
 from scipy.special import softmax
-from colorama import Fore, Back, Style, init as _ci
-_ci(autoreset=True)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  §2  NLP IMPORTS — NLTK + spaCy
-# ═══════════════════════════════════════════════════════════════════════════════
+
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize, MWETokenizer
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 from nltk import pos_tag, ne_chunk, RegexpParser
 from nltk.tree import Tree
-
 import spacy
 from spacy.tokens import Doc
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §3  ML IMPORTS — TensorFlow + scikit-learn
-# ═══════════════════════════════════════════════════════════════════════════════
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.preprocessing.text import Tokenizer as KerasTokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+#  3  ML IMPORTS — TensorFlow + scikit-learn
+
+import tensorflow as tf # type: ignore
+from tensorflow import keras # type: ignore
+from tensorflow.keras import layers # type: ignore
+from tensorflow.keras.preprocessing.text import Tokenizer as KerasTokenizer # type: ignore
+from tensorflow.keras.preprocessing.sequence import pad_sequences # type: ignore
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau # type: ignore
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
@@ -56,57 +49,54 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.naive_bayes import ComplementNB
 from sklearn.pipeline import Pipeline
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §4  TERMINAL HELPERS
-# ═══════════════════════════════════════════════════════════════════════════════
+#  4  TERMINAL HELPERS
 W = 72
 
-def _c(t, *codes): return "".join(codes) + str(t) + Style.RESET_ALL
+def _c(t, *args): return str(t)
 
 def banner():
-    print("\n" + _c("╔" + "═"*70 + "╗", Fore.CYAN))
-    print(_c("║", Fore.CYAN) + _c("  ✦  MediBot — NLTK · spaCy · TensorFlow · sklearn  ".center(70), Fore.WHITE, Style.BRIGHT) + _c("║", Fore.CYAN))
-    print(_c("╚" + "═"*70 + "╝", Fore.CYAN) + "\n")
+    print("\n" + "╔" + "═"*70 + "╗")
+    print("║" + "  ✦  MediBot — NLTK · spaCy · TensorFlow · sklearn  ".center(70) + "║")
+    print("╚" + "═"*70 + "╝\n")
 
 def section(title):
     pad = max(0, (66 - len(title)) // 2)
-    print(f"\n{Fore.CYAN}{'─'*70}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'─'*pad}  {Style.BRIGHT}{title}{Style.RESET_ALL}{Fore.CYAN}  {'─'*max(0,68-pad-len(title))}  {Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'─'*70}{Style.RESET_ALL}\n")
+    print("\n" + "─"*70)
+    print("─"*pad + f"  {title}  " + "─"*max(0,68-pad-len(title)))
+    print("─"*70 + "\n")
 
-def bot_say(text, color=Fore.WHITE):
-    prefix = _c("🩺 MediBot", Fore.CYAN, Style.BRIGHT)
+def bot_say(text):
+    prefix = "🩺 MediBot"
     for i, line in enumerate(textwrap.fill(text, 62).split("\n")):
-        if i == 0: print(f"  {prefix}  {color}{line}{Style.RESET_ALL}")
-        else:      print(f"  {' '*12}  {color}{line}{Style.RESET_ALL}")
+        if i == 0:
+            print(f"  {prefix}  {line}")
+        else:
+            print(f"  {' '*12}  {line}")
 
 def user_prompt(hint=""):
-    h = _c(f"  [{hint}]", Fore.YELLOW) if hint else ""
-    return input(f"\n  {_c('You', Fore.GREEN, Style.BRIGHT)}{h}  ❯  ").strip()
+    h = f"  [{hint}]" if hint else ""
+    return input(f"\n  You{h}  ❯  ").strip()
 
-def pbar(v, w=40, fc=Fore.CYAN):
+def pbar(v, w=40):
     filled = int(w * min(v, 1.0))
-    return f"[{fc}{'█'*filled}{Fore.WHITE}{'░'*(w-filled)}{Style.RESET_ALL}]  {_c(f'{v*100:.1f}%', Style.BRIGHT)}"
+    return f"[{'█'*filled}{'░'*(w-filled)}]  {v*100:.1f}%"
+
+def sev_color(s):
+    return {
+        "Low":    ("", "🟢"),
+        "Medium": ("", "🟡"),
+        "High":   ("", "🔴"),
+    }.get(s, ("", "⚪"))
 
 def thinking(label="Processing", steps=16):
     chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     for i in range(steps):
-        print(f"\r  {_c(chars[i%10], Fore.CYAN, Style.BRIGHT)}  {label}...", end="", flush=True)
+        print(f"\r  {_c(chars[i%10])}  {label}...", end="", flush=True)
         time.sleep(0.08)
     print("\r" + " "*55 + "\r", end="")
 
-def sev_color(s):
-    return {
-        "Low":    (Fore.GREEN,  "🟢"),
-        "Medium": (Fore.YELLOW, "🟡"),
-        "High":   (Fore.RED,    "🔴"),
-    }.get(s, (Fore.WHITE, "⚪"))
+#  5  MEDICAL KNOWLEDGE BASE
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §5  MEDICAL KNOWLEDGE BASE
-# ═══════════════════════════════════════════════════════════════════════════════
 @dataclass
 class Condition:
     name: str
@@ -476,10 +466,7 @@ CONDITIONS: List[Condition] = [
     ),
 ]
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §6  NLP ENGINE — NLTK + spaCy
-# ═══════════════════════════════════════════════════════════════════════════════
+#  6  NLP ENGINE — NLTK + spaCy
 
 # Medical synonym normalisation map
 SYNONYMS: Dict[str, str] = {
@@ -815,9 +802,7 @@ class NLPEngine:
         return None
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §7  ML ENGINE — TensorFlow Keras BiLSTM + sklearn TF-IDF/SVC + Cosine
-# ═══════════════════════════════════════════════════════════════════════════════
+#  7  ML ENGINE — TensorFlow Keras BiLSTM + sklearn TF-IDF/SVC + Cosine
 
 class TFBiLSTMClassifier:
     """
@@ -1135,10 +1120,7 @@ class MLEngine:
             })
         return results
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §8  FOLLOW-UP QUESTION ENGINE
-# ═══════════════════════════════════════════════════════════════════════════════
+#  8  FOLLOW-UP QUESTION ENGINE
 FOLLOWUP_BANK: Dict[str, List[str]] = {
     "duration": [
         "How long have you had these symptoms? (e.g. a few hours, 2 days, a week)",
@@ -1162,20 +1144,18 @@ FOLLOWUP_BANK: Dict[str, List[str]] = {
     ],
 }
 
+#  9  CHATBOT STATE MACHINE
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §9  CHATBOT STATE MACHINE
-# ═══════════════════════════════════════════════════════════════════════════════
 class MediBot:
     MAX_FOLLOWUPS = 3
 
     def __init__(self):
         banner()
-        print(f"  {_c('Initialising NLP pipeline (NLTK + spaCy)...', Fore.YELLOW)}")
+        print(f"  {_c('Initialising NLP pipeline (NLTK + spaCy)...')}")
         self.nlp = NLPEngine()
         print()
 
-        print(f"  {_c('Building and training ML models (TF BiLSTM + sklearn)...', Fore.YELLOW)}")
+        print(f"  {_c('Building and training ML models (TF BiLSTM + sklearn)...')}")
         t0 = time.time()
         self.ml = MLEngine(CONDITIONS)
         print(f"    Training TF-IDF · LinearSVC · ComplementNB (sklearn)...", end=" ", flush=True)
@@ -1191,7 +1171,7 @@ class MediBot:
         )
         dt = time.time() - t0
         print(f"✓  ({dt:.1f}s)")
-        print(f"\n  {_c(f'All models ready ✓  |  {len(CONDITIONS)} conditions', Fore.GREEN, Style.BRIGHT)}\n")
+        print(f"\n  {_c(f'All models ready ✓  |  {len(CONDITIONS)} conditions')}\n")
 
         self._reset()
 
@@ -1209,12 +1189,12 @@ class MediBot:
                 self.asked_cats.append(cat)
                 q = random.choice(FOLLOWUP_BANK[cat])
                 print()
-                bot_say(q, Fore.CYAN)
+                bot_say(q)
                 self.followup_count += 1
                 return
         # all asked — pick random
         cat = random.choice(order)
-        bot_say(random.choice(FOLLOWUP_BANK[cat]), Fore.CYAN)
+        bot_say(random.choice(FOLLOWUP_BANK[cat]))
         self.followup_count += 1
 
     # ── Run ML analysis ───────────────────────────────────────────────────────
@@ -1246,12 +1226,12 @@ class MediBot:
         section("NLP + ML DIAGNOSTIC REPORT")
 
         urg_c, urg_icon = sev_color(urgency)
-        print(f"  {_c('Overall Urgency:', Style.BRIGHT)}  {urg_c}{urg_icon}  {_c(urgency, urg_c, Style.BRIGHT)}")
+        print(f"  {_c('Overall Urgency:')}  {_c(urgency)}")
         if nlp_r.get("duration"):
-            print(f"  {_c('Reported Duration:', Style.BRIGHT)}  {nlp_r['duration']}")
+            print(f"  {_c('Reported Duration:')}  {nlp_r['duration']}")
         sev_v   = nlp_r.get("severity", 1.5)
         sev_lbl = "Severe" if sev_v >= 2.5 else "Moderate" if sev_v >= 1.5 else "Mild"
-        print(f"  {_c('Severity signal:', Style.BRIGHT)}  {sev_lbl} ({sev_v:.1f}×)")
+        print(f"  {_c('Severity signal:')}  {sev_lbl} ({sev_v:.1f}×)")
         print()
 
         # NLP entity summary
@@ -1259,49 +1239,48 @@ class MediBot:
         affirm = list(nlp_r.get("affirmed", set()))[:8]
         neg   = list(nlp_r.get("negated", set()))[:5]
         if affirm or neg or ents:
-            print(f"  {_c('NLP Affirmed:', Style.BRIGHT)}  {', '.join(affirm) or 'none'}")
-            print(f"  {_c('NLP Negated:', Style.BRIGHT)}   {', '.join(neg) or 'none'}")
+            print(f"  {_c('NLP Affirmed:')}  {', '.join(affirm) or 'none'}")
+            print(f"  {_c('NLP Negated:')}   {', '.join(neg) or 'none'}")
             if ents:
                 ent_strs = [f"{e['text']} ({e['label']})" for e in ents[:4]]
-                print(f"  {_c('spaCy NER:', Style.BRIGHT)}     {', '.join(ent_strs)}")
+                print(f"  {_c('spaCy NER:')}     {', '.join(ent_strs)}")
             print()
 
-        print(f"  {_c('Differential Diagnoses', Style.BRIGHT, Fore.CYAN)}\n")
+        print(f"  {_c('Differential Diagnoses')}\n")
         ranks = ["MOST LIKELY","LIKELY","POSSIBLE","LESS LIKELY","UNLIKELY"]
         for i, res in enumerate(results):
             sc, icon = sev_color(res["severity"])
-            icd_tag = _c(f"[{res['icd']}]", Fore.BLACK + Style.BRIGHT)
-            rank_c = Fore.YELLOW + Style.BRIGHT if i == 0 else Fore.WHITE
-            print(f"  {rank_c}{'─'*62}{Style.RESET_ALL}")
-            print(f"  {rank_c}#{i+1}  {res['name']}{Style.RESET_ALL}  {icd_tag}  "
-                  f"{sc}{icon} {res['severity']}{Style.RESET_ALL}  "
-                  f"{_c(ranks[i], Fore.BLACK + Style.BRIGHT)}")
-            print(f"  {_c('Probability:', Style.BRIGHT)}  {pbar(res['probability'], 26, sc)}")
-            print(f"  {_c(res['description'], Fore.WHITE)}")
+            icd_tag = _c(f"[{res['icd']}]")
+            print(f"  {'─'*62}")
+            print(f"  #{i+1}  {res['name']}  {icd_tag}  "
+                  f"{sc}{icon} {res['severity']}  "
+                  f"{_c(ranks[i])}")
+            print(f"  {_c('Probability:')}  {pbar(res['probability'], 26, sc)}")
+            print(f"  {_c(res['description'])}")
             print()
 
         section(f"RECOMMENDATIONS — {results[0]['name'].upper()}")
         for j, rec in enumerate(results[0]["recommendations"], 1):
-            print(f"  {_c(str(j)+'.', Fore.CYAN, Style.BRIGHT)}  {rec}")
+            print(f"  {_c(str(j)+'.')}  {rec}")
 
         if urgency == "High":
-            print(f"\n  {Back.RED}{Fore.WHITE}{Style.BRIGHT}  ⚠️  HIGH URGENCY — SEEK IMMEDIATE MEDICAL ATTENTION  {Style.RESET_ALL}")
+            print(f"\n  ⚠️  HIGH URGENCY — SEEK IMMEDIATE MEDICAL ATTENTION  ")
 
         section("ML PIPELINE USED")
-        print(f"  {_c('NLP:', Style.BRIGHT)}  NLTK (word_tokenize · pos_tag · WordNetLemmatizer · MWE · ne_chunk)")
+        print(f"  {_c('NLP:')}  NLTK (word_tokenize · pos_tag · WordNetLemmatizer · MWE · ne_chunk)")
         print(f"  {'':5}  spaCy (en_core_web_sm · NER · dep parse negation · lemma_)")
-        print(f"  {_c('ML: ', Style.BRIGHT)}  TensorFlow/Keras BiLSTM (Embed 64 → BiLSTM 64 → BiLSTM 32 → Dense)")
+        print(f"  {_c('ML: ')}  TensorFlow/Keras BiLSTM (Embed 64 → BiLSTM 64 → BiLSTM 32 → Dense)")
         print(f"  {'':5}  sklearn TF-IDF + CalibratedLinearSVC (word 1-2gram)")
         print(f"  {'':5}  sklearn TF-IDF + ComplementNB (char 3-5gram)")
         print(f"  {'':5}  Cosine Similarity vs condition profiles")
-        print(f"  {_c('Ensemble:', Style.BRIGHT)}  TF 40% + sklearn 60%  ·  negation penalty  ·  severity boost")
+        print(f"  {_c('Ensemble:')}  TF 40% + sklearn 60%  ·  negation penalty  ·  severity boost")
 
         section("DISCLAIMER")
         dis = ("MediBot is a prototype educational tool using open-source NLP/ML. "
                "It does NOT replace professional medical diagnosis. "
                "Always consult a qualified healthcare professional.")
         for line in textwrap.fill(dis, 66).split("\n"):
-            print(f"  {_c(line, Fore.BLACK + Style.BRIGHT)}")
+            print(f"  {_c(line)}")
         print()
 
     # ── Main message handler ──────────────────────────────────────────────────
@@ -1310,7 +1289,7 @@ class MediBot:
             nlp_r = self.nlp.preprocess(text)
             self.symptom_text.append(text)
             if not nlp_r["nltk_tokens"]:
-                bot_say("I didn't catch specific symptoms. Could you describe how you feel in more detail?", Fore.YELLOW)
+                bot_say("I didn't catch specific symptoms. Could you describe how you feel in more detail?")
                 return
             affirmed = [t for t in list(nlp_r["affirmed"])[:3] if len(t) > 3]
             if affirmed:
@@ -1329,11 +1308,11 @@ class MediBot:
 
     # ── Post-results menu ─────────────────────────────────────────────────────
     def _post_results(self):
-        print(f"\n  {_c('What next?', Style.BRIGHT)}")
-        print(f"  {_c('[1]', Fore.CYAN)}  New symptom check")
-        print(f"  {_c('[2]', Fore.CYAN)}  List all conditions")
-        print(f"  {_c('[q]', Fore.RED)}  Quit\n")
-        c = input(f"  {_c('Choice', Fore.GREEN, Style.BRIGHT)}  ❯  ").strip().lower()
+        print(f"\n  {_c('What next?')}")
+        print(f"  {_c('[1]')}  New symptom check")
+        print(f"  {_c('[2]')}  List all conditions")
+        print(f"  {_c('[q]')}  Quit\n")
+        c = input(f"  {_c('Choice')}  ❯  ").strip().lower()
         if c == "1":
             self._reset()
             print()
@@ -1344,19 +1323,18 @@ class MediBot:
                 by_sys[cond.body_system].append(cond)
             section("CONDITIONS IN KNOWLEDGE BASE")
             for sys, conds in sorted(by_sys.items()):
-                print(f"  {_c(sys.upper(), Fore.CYAN, Style.BRIGHT)}")
+                print(f"  {_c(sys.upper(), )}")
                 for c_ in conds:
                     sc, icon = sev_color(c_.severity)
-                    print(f"    {icon} {c_.name}  {_c(c_.icd, Fore.BLACK + Style.BRIGHT)}")
+                    print(f"    {icon} {c_.name}  {_c(c_.icd)}")
                 print()
             self._post_results()
         else:
-            print(f"\n  {_c('Thank you for using MediBot. Stay well! 🌿', Fore.CYAN, Style.BRIGHT)}\n")
             sys.exit(0)
 
     # ── Run loop ──────────────────────────────────────────────────────────────
     def run(self):
-        print(f"  {_c('NLP: NLTK + spaCy  ·  ML: TensorFlow BiLSTM + sklearn', Fore.WHITE)}\n")
+        print(f"  {_c('NLP: NLTK + spaCy  ·  ML: TensorFlow BiLSTM + sklearn')}\n")
         bot_say("Hello! I'm your AI health assistant. What symptoms are you experiencing today?")
         bot_say("List multiple symptoms separated by commas — e.g. fever, headache, stiff neck")
 
@@ -1367,7 +1345,7 @@ class MediBot:
                 if not user_input:
                     continue
                 if user_input.lower() in ("q","quit","exit","bye"):
-                    print(f"\n  {_c('Goodbye! Stay well. 🌿', Fore.CYAN, Style.BRIGHT)}\n")
+                    print(f"\n  {_c('Goodbye! Stay well. 🌿')}\n")
                     break
                 if user_input.lower() == "reset":
                     self._reset()
@@ -1381,9 +1359,6 @@ class MediBot:
                 print(f"\n\n  {_c('Session interrupted. Goodbye! 🌿', Fore.CYAN)}\n")
                 break
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  §10  ENTRY POINT
-# ═══════════════════════════════════════════════════════════════════════════════
+#  10  ENTRY POINT
 if __name__ == "__main__":
     MediBot().run()

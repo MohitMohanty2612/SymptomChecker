@@ -1,4 +1,4 @@
-# SymptomChat — Python dependencies
+# medibot — Python dependencies
 # Install all:  pip install -r requirements.txt
 
 flask
@@ -9,9 +9,7 @@ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1
 nltk
 numpy
 scipy
-colorama
-
-# Optional — production deployment
+flask-cors
+joblib
 gunicorn
-redis              # for multi-instance session store
-flask-limiter      # rate limiting
+
