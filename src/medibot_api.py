@@ -41,6 +41,15 @@ __main__.Condition = Condition
 NLP = NLPEngine()
 ML = MLEngine(CONDITIONS)
 
+MODELS_LOADED = False
+
+def load_models_once():
+    global MODELS_LOADED
+    if not MODELS_LOADED:
+        print("Loading models (first time only)...")
+        _init_engines()
+        MODELS_LOADED = True
+
 def _init_engines():
     """
     Loads models and manually overrides the 'trained' state 
@@ -93,7 +102,7 @@ def _init_engines():
         print("Trained & Saved")
 
 # Initialize models before starting the server
-_init_engines()
+# _init_engines()
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -213,6 +222,7 @@ def create_session():
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
+    load_models_once()
     body = request.get_json(silent=True) or {}
     sid = body.get("sessionId","").strip()
     message = body.get("message","").strip()
@@ -237,7 +247,7 @@ def reset_session(sid):
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "activeSessions": len(SESSIONS)}), 200
+    return jsonify({"status": "ok", "activeSessions": len(SESSIONS), "modelsLoaded": MODELS_LOADED}), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
