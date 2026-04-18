@@ -190,6 +190,18 @@ def _process(sess, message):
     return {"reply": "Analysis complete.", "phase":"results","results":None}
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "message": "MediBot API is running.",
+        "endpoints": [
+            "/api/session",
+            "/api/chat",
+            "/api/conditions",
+            "/api/health"
+        ]
+    }), 200
+    
 @app.route("/api/session", methods=["POST"])
 def create_session():
     _evict()
