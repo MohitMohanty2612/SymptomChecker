@@ -5,8 +5,9 @@ from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import medibot as medibot
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import src.medibot as medibot
+
+sys.modules['medibot'] = medibot
 
 
 try:
