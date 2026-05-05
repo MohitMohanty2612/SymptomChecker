@@ -5,7 +5,7 @@ from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import src.medibot as medibot
+import medibot as medibot
 
 sys.modules['medibot'] = medibot
 
@@ -20,7 +20,7 @@ MODEL_DIR = os.path.join(BASE_DIR, "models")
 # Ensure folder exists
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-sk_path = os.path.join(MODEL_DIR, "sk_model.joblib")
+sk_path = os.path.join(MODEL_DIR, "ml_model.joblib")
 
 # ── Load MediBot engine ────────────────────────────────────────────────────
 print("\n  [MediBot API] Initialising NLP + ML...")
@@ -50,14 +50,16 @@ def load_models_once():
         MODELS_LOADED = True
 
 def _init_engines():
+    global ML
+    print("🔥 INIT ENGINES CALLED")
     if os.path.exists(sk_path):
         print("  [MediBot API] Loading sklearn model...", end=" ", flush=True)
-        ML.sk_clf = joblib.load(sk_path)
+        ML = joblib.load(sk_path)
         print("Ready")
     else:
         print("  [MediBot API] Training sklearn model...", end=" ", flush=True)
         ML.train()   # Make sure this trains ONLY sklearn now
-        joblib.dump(ML.sk_clf, sk_path)
+        joblib.dump(ML, sk_path)
         print("Trained & Saved")
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
@@ -72,7 +74,8 @@ MAX_FOLLOWUPS = 3
 def _new_session():
     return {
         "phase":            "initial",
-        "symptom_text":     [],
+        "symptoms":         [],
+        "meta":             [],
         "follow_up_count":  0,
         "asked_categories": [],
         "created_at":       time.time(),
@@ -90,14 +93,24 @@ def _evict():
         del SESSIONS[k]
 
 def _next_question(asked: List[str]) -> str:
-    order = ["duration","severity","context","medications","associated"]
-    for cat in order:
-        if cat not in asked:
-            asked.append(cat)
-            return random.choice(FOLLOWUP_BANK[cat])
-    return random.choice(FOLLOWUP_BANK[random.choice(order)])
+    all_categories = ["duration","severity","context","medications","associated"]
+    remaining = [c for c in all_categories if c not in asked]
+    if not remaining:
+        remaining = all_categories
+    cat = random.choice(remaining)
+    asked.append(cat)
+    return random.choice(FOLLOWUP_BANK[cat])
 
 def _build_results(ml_results, urgency, nlp_r):
+    if not ml_results:
+        return {
+            "primaryCondition": "Unknown",
+            "risk": "0%",
+            "urgency": "Low",
+            "conditions": [],
+            "recommendations": ["Consult a doctor"],
+            "disclaimer": "No prediction available"
+        }
     top = ml_results[0]
     return {
         "primaryCondition": top["name"],
@@ -115,7 +128,7 @@ def _build_results(ml_results, urgency, nlp_r):
             } for r in ml_results
         ],
         "recommendations": top["recommendations"],
-        "disclaimer": "This analysis is not a substitute for a medical professional's diagnosys. If symptoms worsen, seek immediate medical attention. Always consult a qualified healthcare professional.",
+        "disclaimer": "This analysis is not a substitute for a medical professional's diagnosys.\nIf symptoms worsen, seek immediate medical attention.\nAlways consult a qualified healthcare professional.",
     }
 
 def _process(sess, message):
@@ -123,7 +136,7 @@ def _process(sess, message):
 
     if phase == "initial":
         nlp_r = NLP.preprocess(message)
-        sess["symptom_text"].append(message)
+        sess["symptoms"].append(message)
         if not nlp_r["nltk_tokens"]:
             return {"reply": "I didn't catch specific symptoms. How are you feeling?", "phase": "initial", "results": None}
         
@@ -133,7 +146,7 @@ def _process(sess, message):
         return {"reply": "Let me ask a few follow-up questions.\n\n" + q, "phase": "gathering", "results": None}
 
     if phase == "gathering":
-        sess["symptom_text"].append(message)
+        sess["meta"].append(message)
         if sess["follow_up_count"] < MAX_FOLLOWUPS:
             q = _next_question(sess["asked_categories"])
             sess["follow_up_count"] += 1
@@ -141,13 +154,61 @@ def _process(sess, message):
 
         # Analyze
         sess["phase"] = "analyzing"
-        full = " ".join(sess["symptom_text"])
+        full = " ".join(sess["symptoms"] + sess["meta"])
+        print("SYMPTOMS:", sess["symptoms"])
+        print("META:", sess["meta"])
+        print("MODEL INPUT:", full)
         nlp_r = NLP.preprocess(full)
-        ml_results = ML.predict(full, nlp_r, top_n=5)
+        user_symptoms = set(nlp_r.get("affirmed", []))
+        # 🔥 Get ALL ML predictions (not just top 3)
+        # 1. Get ALL predictions
+        ml_results = ML.predict(full, nlp_r, top_n=len(CONDITIONS))
+
+        user_symptoms = set([s.lower() for s in nlp_r.get("affirmed", [])] + [full.lower()])
+
+        matched_results = []
+
+        # 2. Strict symptom matching
+        for r in ml_results:
+            cond_obj = next((c for c in CONDITIONS if c.name == r["name"]), None)
+            if not cond_obj:
+                continue
+
+            def normalize(text):
+                return text.lower().replace("_", " ").strip()
+
+            user_symptoms_norm = set([normalize(s) for s in user_symptoms])
+            cond_symptoms_norm = set([normalize(s) for s in cond_obj.symptoms])
+
+            # ✅ smarter matching
+            overlap = 0
+            for us in user_symptoms_norm:
+                for cs in cond_symptoms_norm:
+                    # exact phrase match (VERY IMPORTANT)
+                    if us == cs:
+                        overlap += 3
+
+                    # partial phrase match
+                    elif us in cs or cs in us:
+                        overlap += 1
+
+            if overlap > 0:
+                r["match_score"] = overlap
+                matched_results.append(r)
+
+        # 3. Sort properly
+        matched_results = sorted(
+            matched_results,
+            key=lambda x: float(x["probability_pct"].replace('%','')),
+            reverse=True
+        )
+
+        # 4. ✅ FINAL: take TOP 5 ONLY
+        matched_results = matched_results[:5]
         
         u_score = {"Low":1, "Medium":2, "High":3}
-        urgency = {1:"Low", 2:"Medium", 3:"High"}[max(u_score[r["urgency"]] for r in ml_results[:3])]
-        payload = _build_results(ml_results, urgency, nlp_r)
+        urgency = {1:"Low", 2:"Medium", 3:"High"}[max(u_score[r["urgency"]] for r in matched_results)]
+        payload = _build_results(matched_results, urgency, nlp_r)
         
         sess["phase"] = "results"
         return {"reply": "Analysis complete.", "phase": "results", "results": payload}
@@ -178,21 +239,38 @@ def create_session():
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    load_models_once()
-    body = request.get_json(silent=True) or {}
-    sid = body.get("sessionId","").strip()
-    message = body.get("message","").strip()
-    
-    if not sid or not message:
-        return jsonify({"error":"sessionId and message required"}), 400
+    try:
+        load_models_once()
+        body = request.get_json(silent=True) or {}
+        sid = body.get("sessionId","").strip()
+        message = body.get("message","").strip()
         
-    sess = _get(sid)
-    if sess is None:
-        return jsonify({"error":"Session not found or expired."}), 404
-        
-    result = _process(sess, message)
-    result["sessionId"] = sid
-    return jsonify(result), 200
+        if not sid or not message:
+            return jsonify({"error":"sessionId and message required"}), 400
+            
+        sess = _get(sid)
+        if sess is None:
+            return jsonify({"error":"Session not found or expired."}), 404
+            
+        try:
+            result = _process(sess, message)
+            result["sessionId"] = sid
+            return jsonify(result), 200
+
+        except Exception as e:
+            import traceback
+            print("🔥 ERROR IN /api/chat:")
+            traceback.print_exc()
+
+            return jsonify({
+                "error": str(e)
+            }), 500
+    except Exception as e:
+        print("ERROR:", str(e))
+        return jsonify({
+            "error": "Internal server error",
+            "details": str(e)
+        }), 500
 
 @app.route("/api/reset/<sid>", methods=["POST"])
 def reset_session(sid):

@@ -1,0 +1,836 @@
+[
+  {
+    "name": "Common Cold",
+    "icd": "J00",
+    "symptoms": ["runny nose","sneezing","sore throat","cough","nasal congestion"],
+    "keywords": ["cold","viral","sniffle"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "A mild viral infection of the upper respiratory tract.",
+    "recommendations": ["Rest","Fluids","Steam inhalation"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "Influenza",
+    "icd": "J11",
+    "symptoms": ["fever","body aches","fatigue","chills","dry cough"],
+    "keywords": ["flu","influenza"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "A contagious viral infection affecting the respiratory system.",
+    "recommendations": ["Rest","Hydration","Antiviral medication"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "COVID-19",
+    "icd": "U07.1",
+    "symptoms": ["fever","dry cough","fatigue","loss of smell","shortness of breath"],
+    "keywords": ["covid","coronavirus"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Respiratory illness caused by SARS-CoV-2.",
+    "recommendations": ["Isolation","Monitor oxygen levels","Seek care if severe"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "Pneumonia",
+    "icd": "J18",
+    "symptoms": ["fever","cough","chest pain","shortness of breath","phlegm"],
+    "keywords": ["lung infection"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Infection that inflames air sacs in one or both lungs.",
+    "recommendations": ["Antibiotics","Hospitalization if severe"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "Asthma",
+    "icd": "J45",
+    "symptoms": ["wheezing","shortness of breath","chest tightness","cough"],
+    "keywords": ["asthma","inhaler"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Chronic condition where airways become inflamed and narrow.",
+    "recommendations": ["Use inhaler","Avoid triggers"],
+    "body_system": "respiratory"
+  },
+
+  {
+    "name": "Bronchitis",
+    "icd": "J40",
+    "symptoms": ["persistent cough","mucus","fatigue","chest discomfort"],
+    "keywords": ["bronchitis"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Inflammation of the bronchial tubes.",
+    "recommendations": ["Rest","Hydration"],
+    "body_system": "respiratory"
+  },
+
+  {
+    "name": "Tuberculosis",
+    "icd": "A15",
+    "symptoms": ["chronic cough","weight loss","night sweats","fever","coughing blood"],
+    "keywords": ["tb"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Serious infectious disease mainly affecting lungs.",
+    "recommendations": ["Long-term antibiotics","Isolation"],
+    "body_system": "respiratory"
+  },
+
+  {
+    "name": "Dengue Fever",
+    "icd": "A90",
+    "symptoms": ["high fever","joint pain","rash","headache","pain behind eyes"],
+    "keywords": ["dengue"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Mosquito-borne viral infection causing high fever and pain.",
+    "recommendations": ["Hydration","Monitor platelets"],
+    "body_system": "infectious"
+  },
+
+  {
+    "name": "Malaria",
+    "icd": "B50",
+    "symptoms": ["fever","chills","sweating","headache","nausea"],
+    "keywords": ["malaria"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Parasitic disease transmitted by mosquitoes.",
+    "recommendations": ["Antimalarial drugs"],
+    "body_system": "infectious"
+  },
+
+  {
+    "name": "Typhoid Fever",
+    "icd": "A01",
+    "symptoms": ["prolonged fever","abdominal pain","weakness","loss of appetite"],
+    "keywords": ["typhoid"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Bacterial infection spread through contaminated food.",
+    "recommendations": ["Antibiotics","Hydration"],
+    "body_system": "infectious"
+  },
+
+  {
+    "name": "Chikungunya",
+    "icd": "A92",
+    "symptoms": ["fever","severe joint pain","rash","fatigue"],
+    "keywords": ["chikungunya"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Mosquito-borne viral disease with joint pain.",
+    "recommendations": ["Rest","Pain relief"],
+    "body_system": "infectious"
+  },
+
+  {
+    "name": "Food Poisoning",
+    "icd": "A05",
+    "symptoms": ["vomiting","diarrhea","abdominal cramps","fever"],
+    "keywords": ["food poisoning"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Illness from contaminated food.",
+    "recommendations": ["ORS","Hydration"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Gastroenteritis",
+    "icd": "A09",
+    "symptoms": ["diarrhea","vomiting","abdominal pain","dehydration"],
+    "keywords": ["stomach infection"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Inflammation of stomach and intestines.",
+    "recommendations": ["Fluids","ORS"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Appendicitis",
+    "icd": "K37",
+    "symptoms": ["right lower abdominal pain","fever","nausea","vomiting"],
+    "keywords": ["appendix"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Inflammation of appendix requiring surgery.",
+    "recommendations": ["Emergency surgery"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Acid Reflux",
+    "icd": "K21",
+    "symptoms": ["heartburn","chest burning","acid taste","bloating"],
+    "keywords": ["gerd","reflux"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Stomach acid flows back into esophagus.",
+    "recommendations": ["Avoid spicy food","Antacids"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Irritable Bowel Syndrome",
+    "icd": "K58",
+    "symptoms": ["abdominal pain","bloating","diarrhea","constipation"],
+    "keywords": ["ibs"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Chronic bowel disorder.",
+    "recommendations": ["Diet change","Stress management"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Peptic Ulcer",
+    "icd": "K27",
+    "symptoms": ["burning stomach pain","nausea","bloating"],
+    "keywords": ["ulcer"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Sores in stomach lining.",
+    "recommendations": ["Medication","Avoid irritants"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Hypertension",
+    "icd": "I10",
+    "symptoms": ["headache","dizziness","blurred vision"],
+    "keywords": ["high bp"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "High blood pressure condition.",
+    "recommendations": ["Lifestyle changes","Medication"],
+    "body_system": "cardiovascular"
+  },
+
+  {
+    "name": "Heart Attack",
+    "icd": "I21",
+    "symptoms": ["chest pain","left arm pain","sweating","shortness of breath"],
+    "keywords": ["heart attack"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Blocked blood flow to heart muscle.",
+    "recommendations": ["Emergency care immediately"],
+    "body_system": "cardiovascular"
+  },
+
+  {
+    "name": "Stroke",
+    "icd": "I63",
+    "symptoms": ["facial drooping","arm weakness","speech difficulty"],
+    "keywords": ["stroke"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Brain blood supply interruption.",
+    "recommendations": ["Immediate emergency care"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Anemia",
+    "icd": "D50",
+    "symptoms": ["fatigue","pale skin","dizziness","shortness of breath"],
+    "keywords": ["iron deficiency","low hemoglobin"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "A condition in which you lack enough healthy red blood cells.",
+    "recommendations": ["Iron supplements","Balanced diet","Blood test"],
+    "body_system": "haematological"
+  },
+  {
+    "name": "Leukemia",
+    "icd": "C95",
+    "symptoms": ["fatigue","frequent infections","weight loss","bruising"],
+    "keywords": ["blood cancer"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Cancer of blood-forming tissues including bone marrow.",
+    "recommendations": ["Oncology consultation","Chemotherapy"],
+    "body_system": "haematological"
+  },
+  {
+    "name": "Hypothyroidism",
+    "icd": "E03",
+    "symptoms": ["fatigue","weight gain","cold intolerance","dry skin"],
+    "keywords": ["low thyroid"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Underactive thyroid gland producing insufficient hormones.",
+    "recommendations": ["Thyroid hormone therapy"],
+    "body_system": "endocrine"
+  },
+  {
+    "name": "Hyperthyroidism",
+    "icd": "E05",
+    "symptoms": ["weight loss","rapid heartbeat","anxiety","sweating"],
+    "keywords": ["overactive thyroid"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Excess thyroid hormone production.",
+    "recommendations": ["Antithyroid medication"],
+    "body_system": "endocrine"
+  },
+  {
+    "name": "Type 1 Diabetes",
+    "icd": "E10",
+    "symptoms": ["frequent urination","increased thirst","weight loss","fatigue"],
+    "keywords": ["insulin deficiency"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Autoimmune condition where pancreas produces little or no insulin.",
+    "recommendations": ["Insulin therapy"],
+    "body_system": "endocrine"
+  },
+  {
+    "name": "Type 2 Diabetes",
+    "icd": "E11",
+    "symptoms": ["increased thirst","frequent urination","blurred vision","fatigue"],
+    "keywords": ["diabetes"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Chronic condition affecting blood sugar metabolism.",
+    "recommendations": ["Diet control","Exercise","Medication"],
+    "body_system": "endocrine"
+  },
+  {
+    "name": "Obesity",
+    "icd": "E66",
+    "symptoms": ["excess body fat","fatigue","joint pain"],
+    "keywords": ["overweight"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Excess body fat increasing risk of health problems.",
+    "recommendations": ["Diet","Exercise"],
+    "body_system": "general"
+  },
+  {
+    "name": "Dehydration",
+    "icd": "E86",
+    "symptoms": ["dry mouth","dark urine","dizziness","fatigue"],
+    "keywords": ["low fluids"],
+    "severity": "Low",
+    "urgency": "Medium",
+    "description": "Excessive loss of body fluids.",
+    "recommendations": ["Drink fluids","ORS"],
+    "body_system": "general"
+  },
+  {
+    "name": "Migraine",
+    "icd": "G43",
+    "symptoms": ["severe headache","nausea","light sensitivity","vomiting"],
+    "keywords": ["migraine"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Neurological condition causing intense headaches.",
+    "recommendations": ["Pain relievers","Rest"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Epilepsy",
+    "icd": "G40",
+    "symptoms": ["seizures","confusion","loss of consciousness"],
+    "keywords": ["fits","seizure"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Disorder characterized by recurrent seizures.",
+    "recommendations": ["Antiepileptic drugs"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Parkinson's Disease",
+    "icd": "G20",
+    "symptoms": ["tremor","slow movement","stiffness"],
+    "keywords": ["parkinson"],
+    "severity": "High",
+    "urgency": "Medium",
+    "description": "Progressive nervous system disorder affecting movement.",
+    "recommendations": ["Medication","Therapy"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Alzheimer's Disease",
+    "icd": "G30",
+    "symptoms": ["memory loss","confusion","difficulty thinking"],
+    "keywords": ["dementia"],
+    "severity": "High",
+    "urgency": "Medium",
+    "description": "Progressive neurological disorder causing memory loss.",
+    "recommendations": ["Supportive care"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Meningitis",
+    "icd": "G03",
+    "symptoms": ["stiff neck","fever","headache","sensitivity to light"],
+    "keywords": ["meningitis"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Inflammation of brain and spinal cord membranes.",
+    "recommendations": ["Immediate hospitalization"],
+    "body_system": "neurological"
+  },
+  {
+    "name": "Sciatica",
+    "icd": "M54.3",
+    "symptoms": ["lower back pain","leg pain","numbness"],
+    "keywords": ["sciatica"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Pain radiating along sciatic nerve.",
+    "recommendations": ["Physiotherapy"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Arthritis",
+    "icd": "M19",
+    "symptoms": ["joint pain","stiffness","swelling"],
+    "keywords": ["arthritis"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Inflammation of joints.",
+    "recommendations": ["Pain relief","Exercise"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Osteoporosis",
+    "icd": "M81",
+    "symptoms": ["bone weakness","fractures","back pain"],
+    "keywords": ["bone loss"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Weakening of bones increasing fracture risk.",
+    "recommendations": ["Calcium","Vitamin D"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Gout",
+    "icd": "M10",
+    "symptoms": ["joint pain","redness","swelling"],
+    "keywords": ["uric acid"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Arthritis caused by uric acid crystals.",
+    "recommendations": ["Medication","Diet control"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Chronic Kidney Disease",
+    "icd": "N18",
+    "symptoms": ["fatigue","swelling","reduced urine"],
+    "keywords": ["ckd"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Gradual loss of kidney function.",
+    "recommendations": ["Dialysis","Medical care"],
+    "body_system": "urinary"
+  },
+  {
+    "name": "Urinary Tract Infection",
+    "icd": "N39.0",
+    "symptoms": ["burning urination","frequent urination","pelvic pain"],
+    "keywords": ["uti"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Infection in urinary system.",
+    "recommendations": ["Antibiotics"],
+    "body_system": "urinary"
+  },
+  {
+    "name": "Kidney Stones",
+    "icd": "N20",
+    "symptoms": ["severe flank pain","blood in urine","nausea"],
+    "keywords": ["stone"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Hard deposits in kidneys causing pain.",
+    "recommendations": ["Hydration","Medical removal"],
+    "body_system": "urinary"
+  },
+  {
+    "name": "Prostate Enlargement",
+    "icd": "N40",
+    "symptoms": ["difficulty urinating","frequent urination"],
+    "keywords": ["bph"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Noncancerous enlargement of prostate.",
+    "recommendations": ["Medication"],
+    "body_system": "urinary"
+  },
+  {
+    "name": "Eczema",
+    "icd": "L20",
+    "symptoms": ["itchy skin","rash","dry skin"],
+    "keywords": ["eczema"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Inflammatory skin condition.",
+    "recommendations": ["Moisturizers"],
+    "body_system": "dermatological"
+  },
+  {
+    "name": "Psoriasis",
+    "icd": "L40",
+    "symptoms": ["red patches","scaly skin","itching"],
+    "keywords": ["psoriasis"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Chronic autoimmune skin condition.",
+    "recommendations": ["Topical treatments"],
+    "body_system": "dermatological"
+  },
+  {
+    "name": "Acne",
+    "icd": "L70",
+    "symptoms": ["pimples","oily skin","blackheads"],
+    "keywords": ["acne"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Skin condition causing pimples.",
+    "recommendations": ["Topical creams"],
+    "body_system": "dermatological"
+  },
+  {
+    "name": "Conjunctivitis",
+    "icd": "H10",
+    "symptoms": ["red eye","itching","discharge"],
+    "keywords": ["pink eye"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Inflammation of eye conjunctiva.",
+    "recommendations": ["Eye drops"],
+    "body_system": "ophthalmological"
+  },
+  {
+    "name": "Glaucoma",
+    "icd": "H40",
+    "symptoms": ["vision loss","eye pain","blurred vision"],
+    "keywords": ["glaucoma"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Damage to optic nerve due to pressure.",
+    "recommendations": ["Immediate treatment"],
+    "body_system": "ophthalmological"
+  },
+  {
+    "name": "Cataract",
+    "icd": "H25",
+    "symptoms": ["blurred vision","cloudy lens","poor night vision"],
+    "keywords": ["cataract"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Clouding of eye lens.",
+    "recommendations": ["Surgery"],
+    "body_system": "ophthalmological"
+  },
+  {
+    "name": "Otitis Media",
+    "icd": "H66",
+    "symptoms": ["ear pain","hearing loss","fever"],
+    "keywords": ["ear infection"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Middle ear infection.",
+    "recommendations": ["Antibiotics"],
+    "body_system": "ent"
+  },
+  {
+    "name": "Sinusitis",
+    "icd": "J01",
+    "symptoms": ["facial pain","nasal congestion","headache"],
+    "keywords": ["sinus"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Inflammation of sinuses.",
+    "recommendations": ["Steam inhalation"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "Chronic Obstructive Pulmonary Disease",
+    "icd": "J44",
+    "symptoms": ["chronic cough","shortness of breath","wheezing","sputum production"],
+    "keywords": ["copd","smoker lung"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Progressive lung disease causing airflow limitation, often due to smoking.",
+    "recommendations": ["Stop smoking","Inhalers","Pulmonary rehab"],
+    "body_system": "respiratory"
+  },
+  {
+    "name": "Pulmonary Embolism",
+    "icd": "I26",
+    "symptoms": ["sudden shortness of breath","chest pain","rapid heart rate","cough"],
+    "keywords": ["blood clot lung"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Blockage of pulmonary artery usually due to blood clots.",
+    "recommendations": ["Emergency care","Anticoagulants"],
+    "body_system": "cardiovascular"
+  },
+  {
+    "name": "Deep Vein Thrombosis",
+    "icd": "I82",
+    "symptoms": ["leg swelling","pain","warm skin","redness"],
+    "keywords": ["dvt","clot"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Blood clot in deep veins.",
+    "recommendations": ["Anticoagulants","Compression stockings"],
+    "body_system": "cardiovascular"
+  },
+  {
+    "name": "Atrial Fibrillation",
+    "icd": "I48",
+    "symptoms": ["irregular heartbeat","palpitations","fatigue","dizziness"],
+    "keywords": ["afib"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Irregular and often rapid heart rhythm.",
+    "recommendations": ["Rate control","Anticoagulation"],
+    "body_system": "cardiovascular"
+  },
+  {
+    "name": "Heart Failure",
+    "icd": "I50",
+    "symptoms": ["shortness of breath","fatigue","leg swelling","rapid heartbeat"],
+    "keywords": ["cardiac failure"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Heart unable to pump blood effectively.",
+    "recommendations": ["Medication","Lifestyle changes"],
+    "body_system": "cardiovascular"
+  },
+  {
+    "name": "Angina",
+    "icd": "I20",
+    "symptoms": ["chest pain","pressure","shortness of breath"],
+    "keywords": ["angina"],
+    "severity": "Medium",
+    "urgency": "High",
+    "description": "Chest pain due to reduced blood flow to heart.",
+    "recommendations": ["Nitroglycerin","Medical evaluation"],
+    "body_system": "cardiovascular"
+  },
+
+  {
+    "name": "Hepatitis A",
+    "icd": "B15",
+    "symptoms": ["jaundice","fatigue","abdominal pain","nausea"],
+    "keywords": ["hep a"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Viral liver infection spread through contaminated food.",
+    "recommendations": ["Rest","Hydration"],
+    "body_system": "gastrointestinal"
+  },
+  {
+    "name": "Hepatitis B",
+    "icd": "B16",
+    "symptoms": ["jaundice","dark urine","fatigue","abdominal pain"],
+    "keywords": ["hep b"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Serious liver infection transmitted through blood.",
+    "recommendations": ["Antiviral therapy"],
+    "body_system": "gastrointestinal"
+  },
+  {
+    "name": "Hepatitis C",
+    "icd": "B17",
+    "symptoms": ["fatigue","jaundice","loss of appetite"],
+    "keywords": ["hep c"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Chronic viral liver infection.",
+    "recommendations": ["Antiviral medication"],
+    "body_system": "gastrointestinal"
+  },
+  {
+    "name": "Cirrhosis",
+    "icd": "K74",
+    "symptoms": ["jaundice","ascites","fatigue","easy bruising"],
+    "keywords": ["liver damage"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Scarring of liver due to chronic damage.",
+    "recommendations": ["Medical management"],
+    "body_system": "gastrointestinal"
+  },
+  {
+    "name": "Gallstones",
+    "icd": "K80",
+    "symptoms": ["right abdominal pain","nausea","vomiting"],
+    "keywords": ["gall bladder stone"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Hardened deposits in gallbladder.",
+    "recommendations": ["Surgery if severe"],
+    "body_system": "gastrointestinal"
+  },
+  {
+    "name": "Pancreatitis",
+    "icd": "K85",
+    "symptoms": ["severe abdominal pain","nausea","vomiting","fever"],
+    "keywords": ["pancreas inflammation"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Inflammation of pancreas.",
+    "recommendations": ["Hospital care"],
+    "body_system": "gastrointestinal"
+  },
+
+  {
+    "name": "Rheumatoid Arthritis",
+    "icd": "M06",
+    "symptoms": ["joint pain","swelling","morning stiffness"],
+    "keywords": ["ra"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Autoimmune disorder affecting joints.",
+    "recommendations": ["DMARD therapy"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Fibromyalgia",
+    "icd": "M79.7",
+    "symptoms": ["widespread pain","fatigue","sleep problems"],
+    "keywords": ["fibro"],
+    "severity": "Medium",
+    "urgency": "Low",
+    "description": "Chronic pain disorder.",
+    "recommendations": ["Exercise","Therapy"],
+    "body_system": "musculoskeletal"
+  },
+  {
+    "name": "Carpal Tunnel Syndrome",
+    "icd": "G56.0",
+    "symptoms": ["hand numbness","tingling","weakness"],
+    "keywords": ["cts"],
+    "severity": "Low",
+    "urgency": "Low",
+    "description": "Nerve compression in wrist.",
+    "recommendations": ["Wrist splints"],
+    "body_system": "neurological"
+  },
+
+  {
+    "name": "Anxiety Disorder",
+    "icd": "F41",
+    "symptoms": ["worry","restlessness","rapid heartbeat"],
+    "keywords": ["anxiety"],
+    "severity": "Medium",
+    "urgency": "Medium",
+    "description": "Excessive worry affecting daily life.",
+    "recommendations": ["Therapy","Medication"],
+    "body_system": "mental_health"
+  },
+  {
+    "name": "Depression",
+    "icd": "F32",
+    "symptoms": ["sadness","loss of interest","fatigue"],
+    "keywords": ["depression"],
+    "severity": "Medium",
+    "urgency": "High",
+    "description": "Mood disorder affecting thinking and behavior.",
+    "recommendations": ["Counseling","Medication"],
+    "body_system": "mental_health"
+  },
+  {
+    "name": "Bipolar Disorder",
+    "icd": "F31",
+    "symptoms": ["mood swings","mania","depression"],
+    "keywords": ["bipolar"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Mood disorder with extreme emotional states.",
+    "recommendations": ["Mood stabilizers"],
+    "body_system": "mental_health"
+  },
+  {
+    "name": "Schizophrenia",
+    "icd": "F20",
+    "symptoms": ["hallucinations","delusions","disorganized thinking"],
+    "keywords": ["schizophrenia"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Serious mental disorder affecting thinking.",
+    "recommendations": ["Antipsychotics"],
+    "body_system": "mental_health"
+  },
+
+  {
+    "name": "Breast Cancer",
+    "icd": "C50",
+    "symptoms": ["breast pain","breast lump","nipple discharge","skin changes"],
+    "keywords": ["breast tumor"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Cancer forming in breast tissue.",
+    "recommendations": ["Oncology treatment"],
+    "body_system": "oncology"
+  },
+  {
+    "name": "Lung Cancer",
+    "icd": "C34",
+    "symptoms": ["chronic cough","weight loss","chest pain"],
+    "keywords": ["lung tumor"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Cancer beginning in lungs.",
+    "recommendations": ["Chemotherapy"],
+    "body_system": "oncology"
+  },
+  {
+    "name": "Colon Cancer",
+    "icd": "C18",
+    "symptoms": ["blood in stool","abdominal pain","weight loss"],
+    "keywords": ["colon tumor"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Cancer of large intestine.",
+    "recommendations": ["Surgery","Chemotherapy"],
+    "body_system": "oncology"
+  },
+
+  {
+    "name": "HIV Infection",
+    "icd": "B20",
+    "symptoms": ["weight loss","fever","night sweats","fatigue"],
+    "keywords": ["hiv"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Virus attacking immune system.",
+    "recommendations": ["Antiretroviral therapy"],
+    "body_system": "infectious"
+  },
+  {
+    "name": "Rabies",
+    "icd": "A82",
+    "symptoms": ["fever","agitation","hydrophobia"],
+    "keywords": ["dog bite"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Fatal viral infection transmitted by animal bites.",
+    "recommendations": ["Immediate vaccination"],
+    "body_system": "infectious"
+  },
+  {
+    "name": "Tetanus",
+    "icd": "A35",
+    "symptoms": ["muscle stiffness","jaw lock","spasms"],
+    "keywords": ["lockjaw"],
+    "severity": "High",
+    "urgency": "High",
+    "description": "Bacterial infection causing muscle stiffness.",
+    "recommendations": ["Antitoxin","ICU care"],
+    "body_system": "infectious"
+  }
+]

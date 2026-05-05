@@ -13,7 +13,8 @@ API:  used by medibot_api.py
 """
 
 #  §1  STANDARD IMPORTS
-
+import json
+import os
 import re, sys, time, random, textwrap
 from collections import defaultdict
 from dataclasses import dataclass
@@ -102,362 +103,32 @@ class Condition:
     recommendations: List[str]
     body_system: str
 
-CONDITIONS: List[Condition] = [
-    Condition(
-        "Common Cold","J00",
-        ["runny nose","nasal congestion","sneezing","sore throat","mild cough",
-         "low grade fever","mild headache","watery eyes","fatigue"],
-        ["cold","runny","congestion","sniffle","sneezing","stuffy"],
-        "Low","Low",
-        "Viral upper respiratory infection, usually rhinovirus. Self-limiting in 7–10 days.",
-        ["Rest and stay hydrated","Saline nasal spray for congestion",
-         "OTC antihistamines or decongestants","Throat lozenges or honey for sore throat"],
-        "respiratory"
-    ),
-    Condition(
-        "Influenza (Flu)","J11",
-        ["high fever","severe body aches","muscle pain","fatigue","chills",
-         "dry cough","headache","sore throat","sweating","weakness"],
-        ["flu","influenza","aches","chills","fatigue","sweating","shivering"],
-        "Medium","Medium",
-        "Highly contagious respiratory illness from influenza A/B viruses.",
-        ["Antiviral medication within 48 h of onset","Rest and fluids",
-         "Acetaminophen or ibuprofen for fever","Isolate until 24 h after fever breaks"],
-        "respiratory"
-    ),
-    Condition(
-        "COVID-19","U07.1",
-        ["fever","dry cough","fatigue","loss of taste","loss of smell",
-         "shortness of breath","body aches","headache","sore throat","diarrhea"],
-        ["covid","coronavirus","taste","smell","oxygen","isolate","breathless"],
-        "Medium","High",
-        "Respiratory illness from SARS-CoV-2, ranging mild to critical.",
-        ["Isolate immediately","Monitor SpO₂ — seek ER if below 94%",
-         "Rest and hydration","Follow local public-health guidance"],
-        "respiratory"
-    ),
-    Condition(
-        "Pneumonia","J18",
-        ["productive cough","chest pain","high fever","chills","shortness of breath",
-         "rapid breathing","fatigue","sweating","confusion","phlegm"],
-        ["pneumonia","lung","chest","phlegm","productive","consolidation"],
-        "High","High",
-        "Lung infection — bacterial, viral, or fungal — causing air-sac inflammation.",
-        ["Seek immediate medical evaluation","Antibiotics for bacterial pneumonia",
-         "Hospital admission likely for high-risk patients","Supplemental oxygen if SpO₂ low"],
-        "respiratory"
-    ),
-    Condition(
-        "Asthma","J45",
-        ["wheezing","shortness of breath","chest tightness","cough",
-         "nocturnal cough","exercise breathlessness"],
-        ["asthma","wheeze","inhaler","tightness","breathless","trigger","pollen"],
-        "Medium","Medium",
-        "Chronic inflammatory airway disease with recurrent wheeze and breathlessness.",
-        ["Use rescue inhaler (salbutamol) as prescribed","Identify and avoid triggers",
-         "Ensure preventer inhaler compliance","ER if inhaler gives no relief"],
-        "respiratory"
-    ),
-    Condition(
-        "Bronchitis","J40",
-        ["persistent cough","mucus","chest congestion","mild fever","fatigue",
-         "sore throat","wheezing","chest discomfort"],
-        ["bronchitis","bronchial","mucus","phlegm","productive cough","smoker"],
-        "Low","Low",
-        "Bronchial tube inflammation, usually viral following a cold.",
-        ["Rest and increase fluids","Steam inhalation to loosen mucus",
-         "Avoid smoking","Doctor if cough persists > 3 weeks"],
-        "respiratory"
-    ),
-    Condition(
-        "Allergic Rhinitis","J30",
-        ["sneezing","runny nose","itchy eyes","nasal congestion","watery eyes",
-         "itchy nose","post-nasal drip"],
-        ["allergy","pollen","hay fever","itchy","watery","dust","seasonal"],
-        "Low","Low",
-        "Immune hypersensitivity to airborne allergens causing nasal inflammation.",
-        ["Antihistamines (loratadine/cetirizine)","Intranasal corticosteroid spray",
-         "Avoid allergen when possible","Allergy testing for long-term management"],
-        "respiratory"
-    ),
-    Condition(
-        "Migraine","G43",
-        ["severe headache","throbbing pain","nausea","vomiting",
-         "light sensitivity","aura","visual disturbances","one-sided headache"],
-        ["migraine","throbbing","aura","photophobia","one side","nausea"],
-        "Medium","Medium",
-        "Neurological disorder with recurrent severe headaches and sensory disturbances.",
-        ["Rest in dark quiet room","Triptans or NSAIDs early in attack",
-         "Identify triggers via headache diary","Preventive medication if frequent"],
-        "neurological"
-    ),
-    Condition(
-        "Tension Headache","G44.2",
-        ["dull headache","pressure around head","tight band feeling",
-         "neck tension","shoulder tension"],
-        ["tension","pressure","tight","band","stress","bilateral","dull"],
-        "Low","Low",
-        "Most common headache type caused by muscle tension, stress, or poor posture.",
-        ["OTC analgesics (ibuprofen, paracetamol)","Warm compress on neck/shoulders",
-         "Relaxation techniques","Improve posture and take screen breaks"],
-        "neurological"
-    ),
-    Condition(
-        "Sinusitis","J01",
-        ["facial pain","nasal congestion","thick nasal discharge","post-nasal drip",
-         "reduced smell","headache","facial pressure","toothache"],
-        ["sinus","sinusitis","facial pressure","thick discharge","congested"],
-        "Low","Low",
-        "Sinus inflammation usually following a cold or allergic rhinitis.",
-        ["Saline nasal irrigation","Steam inhalation","OTC decongestants short-term",
-         "Doctor if symptoms > 10 days"],
-        "respiratory"
-    ),
-    Condition(
-        "Gastroenteritis","A09",
-        ["nausea","vomiting","diarrhea","abdominal cramps","stomach pain",
-         "low grade fever","loss of appetite","dehydration"],
-        ["gastro","stomach bug","vomit","diarrhea","cramps","food poisoning"],
-        "Medium","Medium",
-        "Stomach/intestine inflammation from viral or bacterial infection.",
-        ["Oral rehydration salts (ORS)","BRAT diet: banana rice applesauce toast",
-         "Avoid dairy and spicy foods","ER if unable to keep fluids down > 24 h"],
-        "gastrointestinal"
-    ),
-    Condition(
-        "Acid Reflux / GERD","K21",
-        ["heartburn","chest burning","acid taste","regurgitation",
-         "difficulty swallowing","bloating","belching","chronic cough"],
-        ["heartburn","reflux","gerd","acid","burning","regurgitate","belch"],
-        "Low","Low",
-        "Stomach acid flows back into oesophagus, causing irritation.",
-        ["Avoid spicy/fatty/caffeinated foods","Eat smaller meals",
-         "Elevate head of bed","OTC antacids or H2 blockers"],
-        "gastrointestinal"
-    ),
-    Condition(
-        "Appendicitis","K37",
-        ["severe right lower abdominal pain","nausea","vomiting","fever",
-         "loss of appetite","rebound tenderness","guarding"],
-        ["appendix","appendicitis","right lower","rebound","guarding","sharp"],
-        "High","High",
-        "Acute appendix inflammation — surgical emergency if untreated.",
-        ["SEEK EMERGENCY CARE IMMEDIATELY","Do NOT take laxatives or antacids",
-         "Surgery (appendectomy) is standard treatment"],
-        "gastrointestinal"
-    ),
-    Condition(
-        "Urinary Tract Infection (UTI)","N39.0",
-        ["burning urination","frequent urination","urgency","cloudy urine",
-         "strong smell","pelvic pain","lower abdominal pain","blood in urine"],
-        ["uti","urinary","bladder","burning","frequent","cloudy","pelvic"],
-        "Medium","Medium",
-        "Bacterial infection of the urinary tract, most commonly the bladder.",
-        ["Doctor for antibiotic prescription","Drink plenty of water",
-         "Avoid caffeine and alcohol","Urgent care if fever or back pain develops"],
-        "urinary"
-    ),
-    Condition(
-        "Kidney Stones","N20",
-        ["severe flank pain","back pain","radiating groin pain",
-         "blood in urine","nausea","vomiting","painful urination"],
-        ["kidney stone","flank","groin","radiate","severe","wave","colic"],
-        "High","High",
-        "Hard mineral deposits in kidneys causing intense pain as they pass.",
-        ["Drink 2–3 L water daily","NSAIDs or prescription pain relief",
-         "Doctor immediately if fever develops","Lithotripsy for large stones"],
-        "urinary"
-    ),
-    Condition(
-        "Hypertension","I10",
-        ["headache","dizziness","blurred vision","pounding chest",
-         "shortness of breath","nosebleeds","fatigue","often no symptoms"],
-        ["blood pressure","hypertension","high bp","dizziness","nosebleed"],
-        "Medium","Medium",
-        "Chronically elevated blood pressure increasing cardiovascular risk. Often silent.",
-        ["Monitor blood pressure regularly","DASH diet (low sodium)","Regular exercise",
-         "Limit alcohol and quit smoking","Take antihypertensives as prescribed"],
-        "cardiovascular"
-    ),
-    Condition(
-        "Heart Attack (MI)","I21",
-        ["crushing chest pain","chest pressure","left arm pain","jaw pain",
-         "shortness of breath","sweating","nausea","pale","anxiety"],
-        ["heart attack","crushing","chest","left arm","jaw","sudden","sweat"],
-        "High","High",
-        "Coronary artery blockage causing cardiac muscle death.",
-        ["CALL 108/112 IMMEDIATELY","Chew 300 mg aspirin if not allergic",
-         "Lie down and rest","Do NOT drive yourself"],
-        "cardiovascular"
-    ),
-    Condition(
-        "Stroke","I63",
-        ["sudden facial drooping","arm weakness","speech difficulty",
-         "sudden severe headache","vision changes","loss of balance"],
-        ["stroke","facial droop","arm weakness","speech","balance","sudden"],
-        "High","High",
-        "Brain blood-vessel blockage or rupture — use FAST assessment.",
-        ["CALL EMERGENCY SERVICES IMMEDIATELY — time = brain cells",
-         "FAST: Face, Arm, Speech, Time to call","Note symptom onset time",
-         "Do NOT give food or water"],
-        "neurological"
-    ),
-    Condition(
-        "Anxiety Disorder","F41",
-        ["excessive worry","restlessness","muscle tension","irritability",
-         "sleep problems","difficulty concentrating","rapid heartbeat","sweating"],
-        ["anxiety","anxious","worry","nervous","panic","fear","tension","restless"],
-        "Medium","Medium",
-        "Persistent excessive worry that interferes with daily activities.",
-        ["Deep breathing (4-7-8 technique)","Regular aerobic exercise",
-         "Limit caffeine","Consider CBT therapy","Medication if severe"],
-        "mental_health"
-    ),
-    Condition(
-        "Depression","F32",
-        ["persistent sadness","loss of interest","fatigue","worthlessness",
-         "sleep disturbance","appetite changes","difficulty concentrating","hopelessness"],
-        ["depressed","depression","sad","hopeless","worthless","interest","withdraw"],
-        "Medium","High",
-        "Persistent depressive disorder affecting mood, behaviour, and quality of life.",
-        ["Seek professional mental health support","Talk therapy (CBT/IPT) is effective",
-         "Regular light exercise","Maintain social connections"],
-        "mental_health"
-    ),
-    Condition(
-        "Panic Attack","F41.0",
-        ["sudden intense fear","pounding heart","sweating","trembling",
-         "shortness of breath","chest pain","nausea","dizziness","fear of dying"],
-        ["panic attack","sudden fear","pounding","tremble","shake","control","dying"],
-        "Medium","Medium",
-        "Sudden intense fear with physical symptoms; peaks within 10 minutes.",
-        ["Grounding: 5-4-3-2-1 senses","Diaphragmatic breathing",
-         "Reassure yourself it will pass","Avoid caffeine","CBT to prevent recurrence"],
-        "mental_health"
-    ),
-    Condition(
-        "Anemia","D50",
-        ["fatigue","pale skin","shortness of breath","cold hands","dizziness",
-         "rapid heartbeat","brittle nails","headache","poor concentration"],
-        ["anemia","anaemia","pale","iron","dizzy","cold","nail","weakness"],
-        "Medium","Medium",
-        "Insufficient red blood cells or haemoglobin reducing oxygen delivery.",
-        ["Blood test to identify anemia type","Iron-rich diet (red meat, spinach, lentils)",
-         "Vitamin C with iron supplements","Treat underlying cause"],
-        "haematological"
-    ),
-    Condition(
-        "Hypothyroidism","E03",
-        ["fatigue","weight gain","cold intolerance","constipation","dry skin",
-         "hair loss","depression","slow heart rate","puffy face"],
-        ["thyroid","hypothyroid","weight gain","cold intolerance","hair loss","sluggish"],
-        "Medium","Low",
-        "Underactive thyroid producing insufficient hormones. Common in women.",
-        ["TSH blood test for diagnosis","Daily levothyroxine as prescribed",
-         "Take on empty stomach 30-60 min before food","Monitor thyroid every 6–12 months"],
-        "endocrine"
-    ),
-    Condition(
-        "Hyperthyroidism","E05",
-        ["weight loss","rapid heartbeat","anxiety","heat intolerance","sweating",
-         "tremor","increased appetite","diarrhea","bulging eyes"],
-        ["hyperthyroid","overactive thyroid","weight loss","heat","tremor","graves"],
-        "Medium","Medium",
-        "Overactive thyroid producing excess hormones; can cause cardiac complications.",
-        ["Endocrinologist referral essential","Antithyroid medications",
-         "Beta-blockers for heart rate control","Radioactive iodine therapy"],
-        "endocrine"
-    ),
-    Condition(
-        "Type 2 Diabetes","E11",
-        ["increased thirst","frequent urination","blurred vision","slow healing",
-         "fatigue","numbness in feet","frequent infections","increased hunger"],
-        ["diabetes","blood sugar","glucose","thirst","insulin","foot numb"],
-        "Medium","Medium",
-        "Chronic insulin resistance causing elevated blood glucose.",
-        ["Measure fasting blood glucose and HbA1c","Low-GI diet","150+ min exercise/week",
-         "Lose 5–10% body weight if overweight","Metformin is first-line medication"],
-        "endocrine"
-    ),
-    Condition(
-        "Dehydration","E86",
-        ["dark urine","dizziness","dry mouth","decreased urination","headache",
-         "fatigue","muscle cramps","confusion","rapid heartbeat"],
-        ["dehydrated","thirsty","dry mouth","dark urine","cramps","electrolyte"],
-        "Low","Medium",
-        "Insufficient body fluid impairing all physiological functions.",
-        ["Drink water or ORS immediately","Avoid caffeine and alcohol",
-         "Sports drinks for electrolyte replacement","IV fluids if unable to keep down"],
-        "general"
-    ),
-    Condition(
-        "Meningitis","G03",
-        ["severe headache","stiff neck","high fever","photophobia","phonophobia",
-         "nausea","vomiting","rash","confusion","seizures"],
-        ["meningitis","stiff neck","light sensitive","petechiae","rash","severe"],
-        "High","High",
-        "Meninges inflammation — can be bacterial (emergency) or viral.",
-        ["MEDICAL EMERGENCY — call 108/112 immediately",
-         "Non-blanching rash = meningococcal septicaemia emergency",
-         "IV antibiotics must start immediately"],
-        "neurological"
-    ),
-    Condition(
-        "Food Poisoning","A05",
-        ["nausea","vomiting","diarrhea","stomach cramps","fever",
-         "weakness","onset hours after eating"],
-        ["food poisoning","contaminated","ate something","restaurant","vomit"],
-        "Medium","Medium",
-        "Illness from contaminated food/water; usually self-limiting.",
-        ["ORS to maintain hydration","BRAT diet when able",
-         "Seek care if symptoms > 48 h or fever > 38.5°C"],
-        "gastrointestinal"
-    ),
-    Condition(
-        "Eczema","L20",
-        ["itchy skin","dry skin","red patches","oozing blisters","thickened skin",
-         "skin inflammation","rash","flaking"],
-        ["eczema","atopic","dermatitis","itch","dry skin","rash","flare"],
-        "Low","Low",
-        "Chronic inflammatory skin condition causing dry, itchy, inflamed patches.",
-        ["Moisturise frequently with fragrance-free emollient","Avoid triggers",
-         "Topical corticosteroids for flares","Antihistamines at night for itch"],
-        "dermatological"
-    ),
-    Condition(
-        "Gout","M10",
-        ["sudden intense joint pain","joint swelling","redness","warmth",
-         "tenderness","big toe pain","limited movement"],
-        ["gout","uric acid","big toe","swollen","red","warm","tender","purine"],
-        "Medium","Medium",
-        "Inflammatory arthritis from urate crystal deposition in joints.",
-        ["NSAIDs or colchicine for acute attack","Ice pack on joint",
-         "Avoid alcohol and high-purine foods","Allopurinol for long-term control"],
-        "musculoskeletal"
-    ),
-    Condition(
-        "Lower Back Pain","M54.5",
-        ["lower back pain","stiffness","limited movement","muscle spasm",
-         "radiating leg pain","sciatica"],
-        ["back pain","lumbar","spine","stiff","sciatica","disc","posture"],
-        "Low","Low",
-        "Very common musculoskeletal complaint; usually mechanical and self-limiting.",
-        ["Stay active — bed rest is not recommended","Heat/ice packs",
-         "OTC NSAIDs or paracetamol","Core-strengthening physiotherapy"],
-        "musculoskeletal"
-    ),
-    Condition(
-        "Conjunctivitis (Pink Eye)","H10",
-        ["red eyes","eye discharge","itchy eyes","watery eyes",
-         "swollen eyelids","eye crusting","blurred vision","light sensitivity"],
-        ["conjunctivitis","pink eye","red eye","discharge","crusty","itchy eye"],
-        "Low","Low",
-        "Inflammation of the conjunctiva — bacterial, viral, or allergic.",
-        ["Warm compress for crusty discharge","Antibiotic drops for bacterial type",
-         "Avoid touching eyes","Wash hands frequently to prevent spread"],
-        "ophthalmological"
-    ),
-]
+def load_conditions():
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    json_path = os.path.join(BASE_DIR, "data", "conditions.json")
+
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"conditions.json not found at {json_path}")
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return [
+        Condition(
+            name=item["name"],
+            icd=item["icd"],
+            symptoms=item["symptoms"],
+            keywords=item["keywords"],
+            severity=item["severity"],
+            urgency=item["urgency"],
+            description=item["description"],
+            recommendations=item["recommendations"],
+            body_system=item["body_system"],
+        )
+        for item in data
+    ]
+
+CONDITIONS: List[Condition] = load_conditions()
 
 #  6  NLP ENGINE — NLTK + spaCy
 
@@ -465,10 +136,10 @@ CONDITIONS: List[Condition] = [
 SYNONYMS: Dict[str, str] = {
     "tummy":"stomach","belly":"stomach","gut":"stomach",
     "throat":"throat","pharynx":"throat",
-    "chest":"chest","thorax":"chest",
+    "chest":"chest","thorax":"chest","breast":"chest","boobs":"breast",
     "cardiac":"heart","cardio":"heart",
     "gastric":"stomach","abdominal":"stomach abdomen",
-    "lumbar":"back","spine":"back","spinal":"back",
+    "lumbar":"back","spine":"back","spinal":"back","ass":"lower back",
     "articular":"joint",
     "myalgia":"muscle pain",
     "breath":"breathing","respiratory":"breathing",
@@ -477,7 +148,8 @@ SYNONYMS: Dict[str, str] = {
     "dizzy":"dizziness","lightheaded":"dizziness","vertigo":"dizziness",
     "tired":"fatigue","exhausted":"fatigue","lethargic":"fatigue",
     "temp":"fever","feverish":"fever","pyrexia":"fever",
-    "itch":"itching","itchy":"itching",
+    "itching": "itchy skin","itchy": "itchy skin",
+    "skin itching": "itchy skin","itching skin": "itchy skin","skin rash": "rash",
     "swollen":"swelling","puffiness":"swelling","edema":"swelling",
     "phlegm":"mucus","sputum":"mucus",
     "heartburn":"acid reflux","indigestion":"dyspepsia","bloated":"bloating",
@@ -893,8 +565,11 @@ class SklearnEnsemble:
         cos_scores = cos_raw / (cos_raw.sum() + 1e-10)
 
         # Mini-ensemble: word SVC + char NB + cosine
-        return 0.40 * word_probs + 0.25 * char_probs + 0.35 * cos_scores
+        final_probs = 0.40 * word_probs + 0.25 * char_probs + 0.35 * cos_scores
+        if len(final_probs) != len(self.conditions):
+            final_probs = np.resize(final_probs, len(self.conditions))
 
+        return final_probs
 
 class MLEngine:
     """
@@ -910,6 +585,11 @@ class MLEngine:
         self.conditions = conditions
         self._build_training_data()
         self.sk_clf = SklearnEnsemble(conditions)
+        
+    def _normalize_training(self, text):
+        for k, v in SYNONYMS.items():
+            text = re.sub(r"\b" + re.escape(k) + r"\b", v, text.lower())
+        return text
 
     def _build_training_data(self):
         """
@@ -927,22 +607,23 @@ class MLEngine:
             kws  = cond.keywords
 
             # Full profile
-            docs.append(" ".join(syms + kws))
+            text = " ".join(syms + kws)
+            docs.append(self._normalize_training(text))
             labels.append(cond.name)
 
             # Subset augmentation
             for _ in range(12):
                 n = max(2, int(rng.integers(2, len(syms) + 1)))
                 subset = rng.choice(syms, size=min(n, len(syms)), replace=False).tolist()
-                docs.append(" ".join(subset))
+                docs.append(self._normalize_training(" ".join(subset)))
                 labels.append(cond.name)
 
             # Keywords only
-            docs.append(" ".join(kws))
+            docs.append(self._normalize_training(" ".join(kws)))
             labels.append(cond.name)
 
             # Description
-            docs.append(cond.description)
+            docs.append(self._normalize_training(cond.description))
             labels.append(cond.name)
 
         self._train_docs   = docs
@@ -966,10 +647,17 @@ class MLEngine:
 
         # ── Grand ensemble ─────────────────────────────────────────────
         ensemble = sk_scores
+        for i, cond in enumerate(self.conditions):
+            match_count = sum(
+                1 for sym in cond.symptoms
+                if sym.lower() in user_text.lower()
+            )
+            ensemble[i] += 0.2 * match_count
 
         # ── Negation penalty ──────────────────────────────────────────
         negated = nlp_result.get("negated", set())
-        for i, cond in enumerate(self.conditions):
+        for i in range(min(len(ensemble), len(self.conditions))):
+            cond = self.conditions[i]
             profile = " ".join(cond.symptoms + cond.keywords).lower()
             overlap = sum(1 for neg in negated if neg in profile)
             penalty = max(0.1, 1.0 - 0.15 * overlap)
@@ -977,26 +665,30 @@ class MLEngine:
 
         # ── Severity & urgency boosting ────────────────────────────────
         sev_mult = nlp_result.get("severity", 1.5)
-        for i, cond in enumerate(self.conditions):
-            urgency_boost = self.URGENCY_BOOST[cond.urgency]
+        for i in range(min(len(ensemble), len(self.conditions))):
+            cond = self.conditions[i]
+            urgency_boost = self.URGENCY_BOOST.get(cond.urgency, 1.0)
             ensemble[i] *= ((sev_mult / 1.5) * urgency_boost) ** 0.3
 
         # ── Normalise ─────────────────────────────────────────────────
-        total = ensemble.sum()
-        if total > 1e-10:
-            ensemble /= total
+        if len(ensemble) < len(self.conditions):
+            ensemble = np.pad(ensemble, (0, len(self.conditions) - len(ensemble)))
+
+        ensemble = ensemble[:len(self.conditions)]
 
         # ── Top-N ─────────────────────────────────────────────────────
         top_idxs = np.argsort(ensemble)[::-1][:top_n]
         results = []
         for idx in top_idxs:
+            if idx >= len(self.conditions):   # ✅ FIX
+                continue
             cond = self.conditions[idx]
             prob = float(ensemble[idx])
             results.append({
                 "name":            cond.name,
                 "icd":             cond.icd,
                 "probability":     prob,
-                "probability_pct": f"{prob * 100:.1f}%",
+                "probability_pct": f"{min(prob, 1) * 100:.1f}%",
                 "severity":        cond.severity,
                 "urgency":         cond.urgency,
                 "description":     cond.description,
@@ -1059,10 +751,15 @@ class MediBot:
         self.followup_count = 0
         self.asked_cats     = []
 
+        # ✅ FIX: shuffle every new session
+        self.followup_order = list(FOLLOWUP_BANK.keys())
+        random.shuffle(self.followup_order)
+
+        print("DEBUG ORDER:", self.followup_order)  # 👈 keep this temporarily
+
     # ── Ask next follow-up ────────────────────────────────────────────────────
     def _ask_followup(self):
-        order = ["duration","severity","context","medications","associated"]
-        for cat in order:
+        for cat in self.followup_order:
             if cat not in self.asked_cats:
                 self.asked_cats.append(cat)
                 q = random.choice(FOLLOWUP_BANK[cat])
@@ -1070,10 +767,6 @@ class MediBot:
                 bot_say(q)
                 self.followup_count += 1
                 return
-        # all asked — pick random
-        cat = random.choice(order)
-        bot_say(random.choice(FOLLOWUP_BANK[cat]))
-        self.followup_count += 1
 
     # ── Run ML analysis ───────────────────────────────────────────────────────
     def _run_analysis(self):

@@ -1,5 +1,5 @@
-# medibot — Python dependencies
-# Install all:  pip install -r requirements.txt
+# # medibot — Python dependencies
+# # Install all:  pip install -r requirements.txt
 
 flask
 scikit-learn
@@ -11,4 +11,3 @@ scipy
 flask-cors
 joblib
 gunicorn
-
