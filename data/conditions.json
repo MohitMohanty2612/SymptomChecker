@@ -735,12 +735,12 @@
   {
     "name": "Depression",
     "icd": "F32",
-    "symptoms": ["sadness","loss of interest","fatigue"],
-    "keywords": ["depression"],
+    "symptoms": ["sadness", "loss of interest", "fatigue", "excessive sleep", "hypersomnia", "increased appetite"],
+    "keywords": ["depression", "low energy", "oversleeping", "sleeping too much", "cravings"],
     "severity": "Medium",
     "urgency": "High",
-    "description": "Mood disorder affecting thinking and behavior.",
-    "recommendations": ["Counseling","Medication"],
+    "description": "A mood disorder causing a persistent feeling of sadness and loss of interest, often affecting sleep and appetite.",
+    "recommendations": ["Counseling", "Medication", "Routine-building"],
     "body_system": "mental_health"
   },
   {

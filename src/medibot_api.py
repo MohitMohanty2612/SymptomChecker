@@ -92,14 +92,24 @@ def _evict():
     for k in [k for k, v in SESSIONS.items() if now - v["last_active"] > SESSION_TTL]:
         del SESSIONS[k]
 
-def _next_question(asked: List[str]) -> str:
-    all_categories = ["duration","severity","context","medications","associated"]
-    remaining = [c for c in all_categories if c not in asked]
-    if not remaining:
-        remaining = all_categories
-    cat = random.choice(remaining)
-    asked.append(cat)
-    return random.choice(FOLLOWUP_BANK[cat])
+def _next_question(sess: dict, user_message: str) -> str:
+    # 1. Get the category dynamically from the generalized NLP logic
+    category = NLP.get_suggested_category(user_message, sess["asked_categories"])
+    sess["asked_categories"].append(category)
+    
+    # 2. Generalized Bridge Phrases
+    # These make the AI look "real" by acknowledging the input before asking
+    bridges = [
+        "I've noted those details. ",
+        "That's helpful context, thank you. ",
+        "I understand. To get a better picture: ",
+        "I've recorded that. One more thing—",
+        "Understood. Regarding the timeline: " if category == "duration" else "I see. "
+    ]
+    
+    question = random.choice(FOLLOWUP_BANK[category])
+    return random.choice(bridges) + question
+    
 
 def _build_results(ml_results, urgency, nlp_r):
     if not ml_results:
@@ -133,24 +143,25 @@ def _build_results(ml_results, urgency, nlp_r):
 
 def _process(sess, message):
     phase = sess["phase"]
+    
+    # Always preprocess to keep track of signals
+    nlp_r = NLP.preprocess(message)
 
     if phase == "initial":
-        nlp_r = NLP.preprocess(message)
         sess["symptoms"].append(message)
-        if not nlp_r["nltk_tokens"]:
-            return {"reply": "I didn't catch specific symptoms. How are you feeling?", "phase": "initial", "results": None}
-        
-        q = _next_question(sess["asked_categories"])
+        # Pass the message to the question generator for tailoring
+        q = _next_question(sess, message) 
         sess["follow_up_count"] = 1
         sess["phase"] = "gathering"
-        return {"reply": "Let me ask a few follow-up questions.\n\n" + q, "phase": "gathering", "results": None}
+        return {"reply": q, "phase": "gathering"}
 
     if phase == "gathering":
         sess["meta"].append(message)
         if sess["follow_up_count"] < MAX_FOLLOWUPS:
-            q = _next_question(sess["asked_categories"])
+            # Pass the latest answer to tailor the NEXT question
+            q = _next_question(sess, message) 
             sess["follow_up_count"] += 1
-            return {"reply": q, "phase": "gathering", "results": None}
+            return {"reply": q, "phase": "gathering"}
 
         # Analyze
         sess["phase"] = "analyzing"

@@ -382,17 +382,79 @@ class NLPEngine:
         print("✓")
 
         self._stop = self.nltk.stop_words
+        self.medical_context_keywords = {
+            "pain", "ache", "sore", "fever", "cough", "tired", "sleep", 
+            "eat", "weight", "stomach", "head", "breath", "vision"
+        }
+    
+    def _extract_medical_signals(self, lemmas: List[str]) -> List[str]:
+        """
+        Generalized Filter: Automatically keeps words that exist in ANY condition's 
+        symptoms or keywords list, effectively ignoring "couch", "ice cream", etc.
+        """
+        # Create a flat set of all known medical terms from your JSON
+        all_known_terms = set()
+        for cond in CONDITIONS:
+            for s in cond.symptoms:
+                all_known_terms.update(s.lower().replace("_", " ").split())
+            for k in cond.keywords:
+                all_known_terms.update(k.lower().replace("_", " ").split())
+        
+        # Also include general medical context signals
+        context_signals = {"pain", "fever", "sleep", "weight", "duration", "years", "days", "severe"}
+        all_known_terms.update(context_signals)
 
+        # Return only words that the bot "recognizes" as medical
+        return [lemma for lemma in lemmas if lemma in all_known_terms]
+
+    def get_suggested_category(self, text: str, asked_cats: List[str]) -> str:
+        """
+        Generalized Follow-up Logic: Maps user input to follow-up categories 
+        based on the 'body_system' or nature of the detected symptoms.
+        """
+        text = text.lower()
+        
+        # 1. Map body systems to relevant follow-up focus
+        # If the user mentions something related to 'respiratory', prioritize 'duration'
+        # If they mention 'gastrointestinal', prioritize 'context' (diet)
+        
+        detected_systems = {c.body_system for c in CONDITIONS if any(s in text for s in c.symptoms)}
+        
+        if "severity" not in asked_cats and any(w in text for w in ["pain", "hurt", "bad"]):
+            return "severity"
+            
+        if "context" not in asked_cats:
+            if "gastrointestinal" in detected_systems or "infectious" in detected_systems:
+                return "context" # Asks about food/travel
+                
+        if "medications" not in asked_cats:
+            if "cardiovascular" in detected_systems or "neurological" in detected_systems:
+                return "medications" # Asks about existing meds
+                
+        # Fallback to any category not yet explored
+        remaining = [c for c in ["duration", "severity", "context", "medications", "associated"] 
+                    if c not in asked_cats]
+        
+        return random.choice(remaining) if remaining else "associated"
     # ── Public API ───────────────────────────────────────────────────────────
     def preprocess(self, text: str) -> Dict:
         """
         Full NLP pipeline.  Returns a feature dict used by the ML engine.
         """
+        text = text.lower()
         raw = text
+        
+        # NEW: Handle numeric-only responses (e.g., severity '9')
+        if text.strip().isdigit():
+            return {
+                "raw": raw,
+                "processed_text": "",
+                "severity": float(text.strip()),
+                "affirmed": set(),
+                "negated": set()
+            }
 
-        # 1. Synonym normalisation (before tokenising)
         text_norm = self._normalise_synonyms(text)
-
         # 2. NLTK pipeline
         nltk_tokens  = self.nltk.tokenize(text_norm)
         nltk_pos     = self.nltk.pos_tag(nltk_tokens)
@@ -410,14 +472,10 @@ class NLPEngine:
         # 4. Merge — spaCy negation is more reliable; NLTK widens coverage
         combined_neg    = spacy_neg | nltk_neg
         combined_lemmas = list(set(nltk_lemmas + spacy_lemmas))
+        medical_signals = self._extract_medical_signals(combined_lemmas)
         combined_affirm = (spacy_affirm | nltk_affirm) - combined_neg
-
-        # 5. Scalar features
-        severity = self._extract_severity(text)
-        duration = self._extract_duration(text)
-
-        # 6. Processed text for vectorisers
-        processed_text = " ".join(combined_lemmas)
+        
+        processed_text = " ".join(medical_signals if medical_signals else combined_lemmas)
 
         return {
             "raw":             raw,
@@ -432,9 +490,34 @@ class NLPEngine:
             "all_lemmas":      combined_lemmas,
             "affirmed":        combined_affirm,
             "negated":         combined_neg,
-            "severity":        severity,
-            "duration":        duration,
+            "severity":        self._extract_severity(text),
+            "duration":        self._extract_duration(text),
         }
+    
+    def get_suggested_category(self, text: str, asked_cats: List[str]) -> str:
+        """Determines the most relevant follow-up category based on keywords."""
+        text = text.lower()
+        
+        # 1. If they mention pain/discomfort but we haven't asked severity
+        if "severity" not in asked_cats:
+            if any(w in text for w in ["pain", "hurt", "ache", "bad", "sharp", "sore"]):
+                return "severity"
+
+        # 2. If they mention food, stomach, or 'big tummy'
+        if "context" not in asked_cats:
+            if any(w in text for w in ["eat", "food", "stomach", "tummy", "crave", "weight"]):
+                return "context"
+
+        # 3. If they mention vague fatigue or systemic issues
+        if "duration" not in asked_cats:
+            if any(w in text for w in ["tired", "sleep", "weak", "exhausted", "long"]):
+                return "duration"
+
+        # 4. Fallback: Pick something not yet asked
+        remaining = [c for c in ["duration", "severity", "context", "medications", "associated"] 
+                     if c not in asked_cats]
+        
+        return random.choice(remaining) if remaining else "associated"
 
     # ── Helpers ──────────────────────────────────────────────────────────────
     @staticmethod
@@ -648,11 +731,19 @@ class MLEngine:
         # ── Grand ensemble ─────────────────────────────────────────────
         ensemble = sk_scores
         for i, cond in enumerate(self.conditions):
-            match_count = sum(
-                1 for sym in cond.symptoms
-                if sym.lower() in user_text.lower()
-            )
+            # IMPROVED: Smarter matching for multi-word symptoms
+            match_count = 0
+            user_text_l = user_text.lower()
+            for sym in cond.symptoms:
+                norm_sym = sym.lower().replace("_", " ")
+                if norm_sym in user_text_l:
+                    match_count += 1
+            
             ensemble[i] += 0.2 * match_count
+        if nlp_result.get("severity", 0) > 7:
+            for i, cond in enumerate(self.conditions):
+                if cond.urgency == "High":
+                    ensemble[i] *= 1.2
 
         # ── Negation penalty ──────────────────────────────────────────
         negated = nlp_result.get("negated", set())
