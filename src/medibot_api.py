@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-import uuid, time, random, sys, os
+import uuid, time, random, sys, os, logging
 from datetime import datetime
 from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import src.medibot as medibot
+
+import medibot as medibot
+
+logging.basicConfig(level=logging.INFO)
 
 sys.modules['medibot'] = medibot
 
@@ -22,8 +25,8 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 
 sk_path = os.path.join(MODEL_DIR, "ml_model.joblib")
 
-# ── Load MediBot engine ────────────────────────────────────────────────────
-print("\n  [MediBot API] Initialising NLP + ML...")
+# Load MediBot Engine
+logging.info("Initialising NLP + ML...")
 
 from medibot import (
     NLPEngine,
@@ -33,7 +36,7 @@ from medibot import (
     Condition  # Class must be imported for joblib/pickle
 )
 
-# CRITICAL: Prevent AttributeError by linking the class to the current module
+# Link Condition class to __main__ to prevent joblib Pickling errors
 import __main__
 __main__.Condition = Condition
 
@@ -51,18 +54,16 @@ def load_models_once():
 
 def _init_engines():
     global ML
-    print("🔥 INIT ENGINES CALLED")
+    logging.info("Init engines called")
     if os.path.exists(sk_path):
-        print("  [MediBot API] Loading sklearn model...", end=" ", flush=True)
+        logging.info("Loading sklearn model...")
         ML = joblib.load(sk_path)
-        print("Ready")
     else:
-        print("  [MediBot API] Training sklearn model...", end=" ", flush=True)
+        logging.info("Training sklearn model...")
         ML.train()   # Make sure this trains ONLY sklearn now
         joblib.dump(ML, sk_path)
-        print("Trained & Saved")
 
-# ── Flask app ─────────────────────────────────────────────────────────────────
+# Flask Application Setup
 app = Flask(__name__)
 CORS(app)
 
@@ -171,8 +172,7 @@ def _process(sess, message):
         print("MODEL INPUT:", full)
         nlp_r = NLP.preprocess(full)
         user_symptoms = set(nlp_r.get("affirmed", []))
-        # 🔥 Get ALL ML predictions (not just top 3)
-        # 1. Get ALL predictions
+        # Get predictions across all conditions
         ml_results = ML.predict(full, nlp_r, top_n=len(CONDITIONS))
 
         user_symptoms = set([s.lower() for s in nlp_r.get("affirmed", [])] + [full.lower()])
@@ -191,7 +191,7 @@ def _process(sess, message):
             user_symptoms_norm = set([normalize(s) for s in user_symptoms])
             cond_symptoms_norm = set([normalize(s) for s in cond_obj.symptoms])
 
-            # ✅ smarter matching
+            # Calculate strict symptom overlap
             overlap = 0
             for us in user_symptoms_norm:
                 for cs in cond_symptoms_norm:
@@ -214,7 +214,7 @@ def _process(sess, message):
             reverse=True
         )
 
-        # 4. ✅ FINAL: take TOP 5 ONLY
+        # 4. Take top 5 results
         matched_results = matched_results[:5]
         
         u_score = {"Low":1, "Medium":2, "High":3}
@@ -226,7 +226,7 @@ def _process(sess, message):
 
     return {"reply": "Analysis complete.", "phase":"results","results":None}
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# API Endpoints
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
@@ -269,9 +269,7 @@ def chat():
             return jsonify(result), 200
 
         except Exception as e:
-            import traceback
-            print("🔥 ERROR IN /api/chat:")
-            traceback.print_exc()
+            logging.error("Error in /api/chat", exc_info=True)
 
             return jsonify({
                 "error": str(e)
