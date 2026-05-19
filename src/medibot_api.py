@@ -10,7 +10,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
 
-import src.medibot as medibot
+try:
+    import src.medibot as medibot
+    from src.medibot import NLPEngine, MLEngine, CONDITIONS, FOLLOWUP_BANK, Condition
+except ImportError:
+    import medibot as medibot
+    from medibot import NLPEngine, MLEngine, CONDITIONS, FOLLOWUP_BANK, Condition
 
 logging.basicConfig(level=logging.INFO)
 
