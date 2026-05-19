@@ -9,14 +9,8 @@ from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import medibot
-from medibot import (
-    NLPEngine,
-    MLEngine,
-    CONDITIONS,
-    FOLLOWUP_BANK,
-    Condition
-)
+
+import medibot as medibot
 
 logging.basicConfig(level=logging.INFO)
 
