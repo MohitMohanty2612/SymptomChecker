@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
 
-import medibot as medibot
+import src.medibot as medibot
 
 logging.basicConfig(level=logging.INFO)
 
