@@ -1,12 +1,7 @@
-#!/usr/bin/env python3
-"""
-medibot.py - MediBot Healthcare Chatbot
-"""
-
 # Standard Imports
 import json
 import os
-import re, sys, time, random, textwrap
+import re, random
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional, Set
@@ -115,11 +110,6 @@ SEVERITY_MAP: Dict[str, float] = {
 }
 
 class SpaCyProcessor:
-    """
-    Helper class for processing text with spaCy, including lemmatization, 
-    negation detection via dependency parsing, entity extraction, and POS tagging.
-    """
-
     def __init__(self, model: str = "en_core_web_sm"):
         try:
             self.nlp = spacy.load(model)
@@ -134,7 +124,6 @@ class SpaCyProcessor:
 
     @staticmethod
     def lemmatize(doc: Doc, stop_words: Set[str]) -> List[str]:
-        """Context-aware lemmatisation via spaCy's morphological analysis."""
         return [
             token.lemma_ for token in doc
             if not token.is_stop
@@ -146,10 +135,6 @@ class SpaCyProcessor:
 
     @staticmethod
     def detect_negations_dep(doc: Doc) -> Tuple[Set[str], Set[str]]:
-        """
-        Dependency-parse negation: finds tokens whose governor is negated.
-        This is more accurate than window heuristics for complex sentences.
-        """
         negated: Set[str] = set()
         negated_heads: Set[int] = set()
 
@@ -174,7 +159,6 @@ class SpaCyProcessor:
 
     @staticmethod
     def extract_entities(doc: Doc) -> List[Dict]:
-        """Extract named entities (spaCy general NER — best-effort for medical text)."""
         return [
             {"text": ent.text, "label": ent.label_, "start": ent.start, "end": ent.end}
             for ent in doc.ents
@@ -186,11 +170,6 @@ class SpaCyProcessor:
 
 
 class NLPEngine:
-    """
-    NLP processing pipeline using spaCy for tokenization, lemmatization, 
-    and dependency-based negation extraction.
-    """
-
     def __init__(self):
         self.spacy = SpaCyProcessor("en_core_web_sm")
         self._stop = STOP_WORDS
@@ -198,65 +177,24 @@ class NLPEngine:
             "pain", "ache", "sore", "fever", "cough", "tired", "sleep", 
             "eat", "weight", "stomach", "head", "breath", "vision"
         }
-    
-    def _extract_medical_signals(self, lemmas: List[str]) -> List[str]:
-        """
-        Generalized Filter: Automatically keeps words that exist in ANY condition's 
-        symptoms or keywords list, effectively ignoring "couch", "ice cream", etc.
-        """
-        # Create a flat set of all known medical terms from your JSON
-        all_known_terms = set()
+        
+        # Pre-compute diagnostic vocabulary once for efficiency
+        self.all_known_terms = set()
         for cond in CONDITIONS:
             for s in cond.symptoms:
-                all_known_terms.update(s.lower().replace("_", " ").split())
+                self.all_known_terms.update(s.lower().replace("_", " ").split())
             for k in cond.keywords:
-                all_known_terms.update(k.lower().replace("_", " ").split())
-        
-        # Also include general medical context signals
+                self.all_known_terms.update(k.lower().replace("_", " ").split())
         context_signals = {"pain", "fever", "sleep", "weight", "duration", "years", "days", "severe"}
-        all_known_terms.update(context_signals)
+        self.all_known_terms.update(context_signals)
+    
+    def _extract_medical_signals(self, lemmas: List[str]) -> List[str]:
+        return [lemma for lemma in lemmas if lemma in self.all_known_terms]
 
-        # Return only words that the bot "recognizes" as medical
-        return [lemma for lemma in lemmas if lemma in all_known_terms]
-
-    def get_suggested_category(self, text: str, asked_cats: List[str]) -> str:
-        """
-        Generalized Follow-up Logic: Maps user input to follow-up categories 
-        based on the 'body_system' or nature of the detected symptoms.
-        """
-        text = text.lower()
-        
-        # 1. Map body systems to relevant follow-up focus
-        # If the user mentions something related to 'respiratory', prioritize 'duration'
-        # If they mention 'gastrointestinal', prioritize 'context' (diet)
-        
-        detected_systems = {c.body_system for c in CONDITIONS if any(s in text for s in c.symptoms)}
-        
-        if "severity" not in asked_cats and any(w in text for w in ["pain", "hurt", "bad"]):
-            return "severity"
-            
-        if "context" not in asked_cats:
-            if "gastrointestinal" in detected_systems or "infectious" in detected_systems:
-                return "context" # Asks about food/travel
-                
-        if "medications" not in asked_cats:
-            if "cardiovascular" in detected_systems or "neurological" in detected_systems:
-                return "medications" # Asks about existing meds
-                
-        # Fallback to any category not yet explored
-        remaining = [c for c in ["duration", "severity", "context", "medications", "associated"] 
-                    if c not in asked_cats]
-        
-        return random.choice(remaining) if remaining else "associated"
-    # ── Public API ───────────────────────────────────────────────────────────
     def preprocess(self, text: str) -> Dict:
-        """
-        Full NLP pipeline.  Returns a feature dict used by the ML engine.
-        """
         text = text.lower()
         raw = text
         
-        # NEW: Handle numeric-only responses (e.g., severity '9')
         if text.strip().isdigit():
             return {
                 "raw": raw,
@@ -268,7 +206,7 @@ class NLPEngine:
 
         text_norm = self._normalise_synonyms(text)
         
-        # spaCy pipeline
+        # Extract features using spaCy pipeline
         doc          = self.spacy.process(text_norm)
         spacy_lemmas = self.spacy.lemmatize(doc, self._stop)
         spacy_affirm, spacy_neg = self.spacy.detect_negations_dep(doc)
@@ -295,31 +233,23 @@ class NLPEngine:
         }
     
     def get_suggested_category(self, text: str, asked_cats: List[str]) -> str:
-        """Determines the most relevant follow-up category based on keywords."""
         text = text.lower()
-        
-        # 1. If they mention pain/discomfort but we haven't asked severity
         if "severity" not in asked_cats:
             if any(w in text for w in ["pain", "hurt", "ache", "bad", "sharp", "sore"]):
                 return "severity"
-
-        # 2. If they mention food, stomach, or 'big tummy'
+        
         if "context" not in asked_cats:
             if any(w in text for w in ["eat", "food", "stomach", "tummy", "crave", "weight"]):
                 return "context"
-
-        # 3. If they mention vague fatigue or systemic issues
+        
         if "duration" not in asked_cats:
             if any(w in text for w in ["tired", "sleep", "weak", "exhausted", "long"]):
                 return "duration"
-
-        # 4. Fallback: Pick something not yet asked
         remaining = [c for c in ["duration", "severity", "context", "medications", "associated"] 
                      if c not in asked_cats]
-        
         return random.choice(remaining) if remaining else "associated"
 
-    # ── Helpers ──────────────────────────────────────────────────────────────
+    # Helpers
     @staticmethod
     def _normalise_synonyms(text: str) -> str:
         text_l = text.lower()
@@ -349,20 +279,12 @@ class NLPEngine:
                 return m.group(0)
         return None
 
-
-#  7  ML ENGINE — sklearn TF-IDF/SVC + Cosine
-
 class SklearnEnsemble:
-    """
-    Ensemble classifier combining word-level LinearSVC, character-level ComplementNB, 
-    and cosine similarity profiling.
-    """
-
     def __init__(self, conditions: List[Condition]):
         self.conditions = conditions
         self.le = LabelEncoder()
 
-        # Word TF-IDF + calibrated LinearSVC
+        # 1. Word-level SVM pipeline (with probability calibration)
         self.word_pipeline = Pipeline([
             ("tfidf", TfidfVectorizer(
                 ngram_range=(1, 2),
@@ -377,7 +299,7 @@ class SklearnEnsemble:
             )),
         ])
 
-        # Char TF-IDF + ComplementNB (for partial token matches)
+        # 2. Character-level Naive Bayes pipeline (for robust handling of typos/partial matches)
         self.char_tfidf = TfidfVectorizer(
             ngram_range=(3, 5),
             sublinear_tf=True,
@@ -386,36 +308,28 @@ class SklearnEnsemble:
         )
         self.char_nb = ComplementNB(alpha=0.3)
 
-        # Condition profile matrix (for cosine similarity)
+        # 3. TF-IDF Profile matrix for direct cosine similarity matches
         self.cond_profiles: List[str] = [
             " ".join(c.symptoms + c.keywords + [c.description])
             for c in conditions
         ]
-        self._profile_matrix_word = None   # set after fit
+        self._profile_matrix_word = None
 
     def fit(self, texts: List[str], labels: List[str]):
         y = self.le.fit_transform(labels)
 
-        # Train word pipeline
         self.word_pipeline.fit(texts, labels)
 
-        # Train char ComplementNB
         X_char = self.char_tfidf.fit_transform(texts)
         self.char_nb.fit(X_char, y)
 
-        # Pre-vectorise condition profiles for cosine similarity
         self._profile_matrix_word = (
             self.word_pipeline.named_steps["tfidf"].transform(self.cond_profiles)
         )
 
     def predict_proba_over_conditions(self, text: str) -> np.ndarray:
-        """
-        Returns a probability vector of length len(CONDITIONS),
-        indexed in the same order as self.conditions.
-        """
         cond_names = [c.name for c in self.conditions]
 
-        # Word pipeline probabilities (aligned to le.classes_)
         word_probs_raw = self.word_pipeline.predict_proba([text])[0]
 
         # Char NB probabilities
@@ -427,7 +341,6 @@ class SklearnEnsemble:
         X_word = self.word_pipeline.named_steps["tfidf"].transform([text])
         cos_raw = cosine_similarity(X_word, self._profile_matrix_word)[0]
 
-        # Map le.classes_ probs → conditions order
         word_probs = np.zeros(len(cond_names))
         char_probs = np.zeros(len(cond_names))
         for i, label in enumerate(self.le.classes_):
@@ -436,10 +349,8 @@ class SklearnEnsemble:
                 word_probs[idx] = word_probs_raw[i]
                 char_probs[idx] = char_probs_raw[i]
 
-        # Normalise cosine scores
         cos_scores = cos_raw / (cos_raw.sum() + 1e-10)
 
-        # Mini-ensemble: word SVC + char NB + cosine
         final_probs = 0.40 * word_probs + 0.25 * char_probs + 0.35 * cos_scores
         if len(final_probs) != len(self.conditions):
             final_probs = np.resize(final_probs, len(self.conditions))
@@ -447,11 +358,7 @@ class SklearnEnsemble:
         return final_probs
 
 class MLEngine:
-    """
-    Machine Learning diagnostic engine managing training and symptom matching 
-    with negation and severity adjustments.
-    """
-
+    #Training and symptom matching 
     URGENCY_BOOST = {"High": 1.4, "Medium": 1.1, "Low": 1.0}
 
     def __init__(self, conditions: List[Condition]):
@@ -465,10 +372,6 @@ class MLEngine:
         return text
 
     def _build_training_data(self):
-        """
-        Augments the conditions into training samples by generating subsets of symptoms, 
-        combining keywords, and including descriptions.
-        """
         docs, labels = [], []
         rng = np.random.default_rng(42)
 
@@ -476,23 +379,19 @@ class MLEngine:
             syms = cond.symptoms
             kws  = cond.keywords
 
-            # Full profile
             text = " ".join(syms + kws)
             docs.append(self._normalize_training(text))
             labels.append(cond.name)
 
-            # Subset augmentation
             for _ in range(12):
                 n = max(2, int(rng.integers(2, len(syms) + 1)))
                 subset = rng.choice(syms, size=min(n, len(syms)), replace=False).tolist()
                 docs.append(self._normalize_training(" ".join(subset)))
                 labels.append(cond.name)
 
-            # Keywords only
             docs.append(self._normalize_training(" ".join(kws)))
             labels.append(cond.name)
 
-            # Description
             docs.append(self._normalize_training(cond.description))
             labels.append(cond.name)
 
@@ -500,22 +399,14 @@ class MLEngine:
         self._train_labels = labels
 
     def train(self):
-        """Train both classifiers. Call once on startup."""
-        # sklearn is fast
         self.sk_clf.fit(self._train_docs, self._train_labels)
 
 
     def predict(self, user_text: str, nlp_result: Dict, top_n: int = 5) -> List[Dict]:
-        """
-        Ensemble prediction.  Returns top_n conditions with probability etc.
-        """
         combined_text = user_text + " " + nlp_result.get("processed_text", "")
-        cond_names = [c.name for c in self.conditions]
 
-        # Predict using core ML ensemble
         sk_scores = self.sk_clf.predict_proba_over_conditions(combined_text)
 
-        # Apply keyword/symptom overlap boosts
         ensemble = sk_scores
         for i, cond in enumerate(self.conditions):
             match_count = 0
@@ -532,7 +423,6 @@ class MLEngine:
                 if cond.urgency == "High":
                     ensemble[i] *= 1.2
 
-        # Apply negation penalty (demote symptoms that are negated)
         negated = nlp_result.get("negated", set())
         for i in range(min(len(ensemble), len(self.conditions))):
             cond = self.conditions[i]
@@ -541,20 +431,18 @@ class MLEngine:
             penalty = max(0.1, 1.0 - 0.15 * overlap)
             ensemble[i] *= penalty
 
-        # Apply severity and urgency boosts
         sev_mult = nlp_result.get("severity", 1.5)
         for i in range(min(len(ensemble), len(self.conditions))):
             cond = self.conditions[i]
             urgency_boost = self.URGENCY_BOOST.get(cond.urgency, 1.0)
             ensemble[i] *= ((sev_mult / 1.5) * urgency_boost) ** 0.3
 
-        # Normalize score array
         if len(ensemble) < len(self.conditions):
             ensemble = np.pad(ensemble, (0, len(self.conditions) - len(ensemble)))
 
         ensemble = ensemble[:len(self.conditions)]
 
-        # Extract top N predictions
+        # Retrieve and format the top 5 results
         top_idxs = np.argsort(ensemble)[::-1][:top_n]
         results = []
         for idx in top_idxs:
@@ -575,7 +463,7 @@ class MLEngine:
             })
         return results
 
-#  8  FOLLOW-UP QUESTION ENGINE
+# Follow-up Question Engine Bank
 FOLLOWUP_BANK: Dict[str, List[str]] = {
     "duration": [
         "How long have you had these symptoms? (e.g. a few hours, 2 days, a week)",

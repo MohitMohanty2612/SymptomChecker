@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
-import uuid, time, random, sys, os, logging
-from datetime import datetime
+import uuid
+import time
+import random
+import sys
+import os
+import logging
 from typing import Dict, List
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-
-import medibot as medibot
+import medibot
+from medibot import (
+    NLPEngine,
+    MLEngine,
+    CONDITIONS,
+    FOLLOWUP_BANK,
+    Condition
+)
 
 logging.basicConfig(level=logging.INFO)
-
-sys.modules['medibot'] = medibot
-
 
 try:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,24 +26,10 @@ except NameError:
     BASE_DIR = os.getcwd()
 
 MODEL_DIR = os.path.join(BASE_DIR, "models")
-
-# Ensure folder exists
 os.makedirs(MODEL_DIR, exist_ok=True)
-
 sk_path = os.path.join(MODEL_DIR, "ml_model.joblib")
 
-# Load MediBot Engine
-logging.info("Initialising NLP + ML...")
-
-from medibot import (
-    NLPEngine,
-    MLEngine,
-    CONDITIONS,
-    FOLLOWUP_BANK,
-    Condition  # Class must be imported for joblib/pickle
-)
-
-# Link Condition class to __main__ to prevent joblib Pickling errors
+sys.modules['medibot'] = medibot
 import __main__
 __main__.Condition = Condition
 
@@ -60,10 +53,8 @@ def _init_engines():
         ML = joblib.load(sk_path)
     else:
         logging.info("Training sklearn model...")
-        ML.train()   # Make sure this trains ONLY sklearn now
+        ML.train()
         joblib.dump(ML, sk_path)
-
-# Flask Application Setup
 app = Flask(__name__)
 CORS(app)
 
@@ -94,12 +85,9 @@ def _evict():
         del SESSIONS[k]
 
 def _next_question(sess: dict, user_message: str) -> str:
-    # 1. Get the category dynamically from the generalized NLP logic
     category = NLP.get_suggested_category(user_message, sess["asked_categories"])
     sess["asked_categories"].append(category)
     
-    # 2. Generalized Bridge Phrases
-    # These make the AI look "real" by acknowledging the input before asking
     bridges = [
         "I've noted those details. ",
         "That's helpful context, thank you. ",
@@ -144,13 +132,10 @@ def _build_results(ml_results, urgency, nlp_r):
 
 def _process(sess, message):
     phase = sess["phase"]
-    
-    # Always preprocess to keep track of signals
     nlp_r = NLP.preprocess(message)
 
     if phase == "initial":
         sess["symptoms"].append(message)
-        # Pass the message to the question generator for tailoring
         q = _next_question(sess, message) 
         sess["follow_up_count"] = 1
         sess["phase"] = "gathering"
@@ -159,27 +144,23 @@ def _process(sess, message):
     if phase == "gathering":
         sess["meta"].append(message)
         if sess["follow_up_count"] < MAX_FOLLOWUPS:
-            # Pass the latest answer to tailor the NEXT question
             q = _next_question(sess, message) 
             sess["follow_up_count"] += 1
             return {"reply": q, "phase": "gathering"}
 
-        # Analyze
         sess["phase"] = "analyzing"
         full = " ".join(sess["symptoms"] + sess["meta"])
         print("SYMPTOMS:", sess["symptoms"])
         print("META:", sess["meta"])
         print("MODEL INPUT:", full)
         nlp_r = NLP.preprocess(full)
-        user_symptoms = set(nlp_r.get("affirmed", []))
-        # Get predictions across all conditions
         ml_results = ML.predict(full, nlp_r, top_n=len(CONDITIONS))
 
-        user_symptoms = set([s.lower() for s in nlp_r.get("affirmed", [])] + [full.lower()])
+        user_symptoms = {s.lower() for s in nlp_r.get("affirmed", [])}
+        user_symptoms.add(full.lower())
 
         matched_results = []
 
-        # 2. Strict symptom matching
         for r in ml_results:
             cond_obj = next((c for c in CONDITIONS if c.name == r["name"]), None)
             if not cond_obj:
@@ -191,15 +172,11 @@ def _process(sess, message):
             user_symptoms_norm = set([normalize(s) for s in user_symptoms])
             cond_symptoms_norm = set([normalize(s) for s in cond_obj.symptoms])
 
-            # Calculate strict symptom overlap
             overlap = 0
             for us in user_symptoms_norm:
                 for cs in cond_symptoms_norm:
-                    # exact phrase match (VERY IMPORTANT)
                     if us == cs:
                         overlap += 3
-
-                    # partial phrase match
                     elif us in cs or cs in us:
                         overlap += 1
 
@@ -207,14 +184,12 @@ def _process(sess, message):
                 r["match_score"] = overlap
                 matched_results.append(r)
 
-        # 3. Sort properly
         matched_results = sorted(
             matched_results,
             key=lambda x: float(x["probability_pct"].replace('%','')),
             reverse=True
         )
 
-        # 4. Take top 5 results
         matched_results = matched_results[:5]
         
         u_score = {"Low":1, "Medium":2, "High":3}
